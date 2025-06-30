@@ -20,7 +20,7 @@ export default function AISummaryOutput({ summary, onCopy, copied, characterCoun
       <textarea
         value={summary}
         onChange={onSummaryChange}
-        placeholder="Summary will appear here\nEnter medical notes and click 'Generate Summary'"
+        placeholder="Summary will appear here. Enter medical notes and click 'Generate Summary'"
         className="w-full h-80 p-4 border border-gray-400 rounded-xl resize-none text-gray-700 placeholder-gray-400 focus:outline-none bg-gray-50 whitespace-pre-wrap leading-relaxed overflow-auto"
       />
       <div className="mt-4 flex justify-between items-center">
