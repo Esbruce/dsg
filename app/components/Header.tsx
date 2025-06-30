@@ -1,16 +1,20 @@
 import React from "react";
+import Image from "next/image";
 
 export default function Header() {
   return (
-    <div className="text-center flex flex-col items-center p-2">
-      <div className="flex items-center justify-center gap-4">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 bg-clip-text text-transparent leading-tight text-center">
-          Medical Discharge Summary Generator
-        </h1>
+    <header className="w-full bg-white px-8 py-3 flex items-center justify-between shadow-sm max-w-5xl mx-auto rounded-2xl">
+      {/* Left: Logo and Slogan */}
+      <div className="flex items-center gap-6">
+        <Image src="/dsg_logo.jpg" alt="DSG Logo" width={240} height={90} className="object-contain" priority />
+        <span className="text-lg text-gray-800 font-medium whitespace-nowrap">Built by doctors. Powered by AI.</span>
+        <div style={{ width: '180px' }} />
       </div>
-      <p className="text-xl text-gray-600 max-w-3xl p-4 leading-relaxed font-medium text-center">
-        Built by Doctors. Powered by AI.
-      </p>
-    </div>
+      {/* Right: Navigation */}
+      <nav className="flex items-center gap-2">
+        <a href="#about" className="text-lg font-medium text-gray-800 hover:text-blue-600 transition-colors" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>About</a>
+        <span className="text-lg font-medium ml-4" style={{ fontFamily: 'Arial, Helvetica, sans-serif', cursor: 'pointer', color: 'rgba(4,179,190,1)' }}>Settings</span>
+      </nav>
+    </header>
   );
 } 
