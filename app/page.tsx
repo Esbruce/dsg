@@ -15,6 +15,7 @@ export default function Home() {
   const [summary, setSummary] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmNoPII, setConfirmNoPII] = useState(false);
 
   const handleProcess = async () => {
     if (!medicalNotes.trim()) {
@@ -74,23 +75,37 @@ export default function Home() {
       <div className="flex flex-col min-h-screen bg-gray-50">
         <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
           <Header />
-          <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start min-h-[60vh]">
+          <div className="mb-8" />
+          <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 items-start min-h-[50vh]">
             {/* Input Section */}
-            <section className="h-[100%] bg-white rounded-2xl flex flex-col p-6 gap-6 border border-gray-400 min-h-[300px] max-h-[80vh] text-center">
+            <section className="h-[100%] bg-white rounded-2xl flex flex-col p-5 gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] text-center">
               <MedicalNotesInput
                 value={medicalNotes}
                 onChange={(e) => setMedicalNotes(e.target.value)}
                 onClear={() => setMedicalNotes("")}
                 characterCount={medicalNotes.length}
               />
+              <div className="flex items-center justify-center mb-2">
+                <input
+                  id="no-pii-checkbox"
+                  type="checkbox"
+                  checked={confirmNoPII}
+                  onChange={e => setConfirmNoPII(e.target.checked)}
+                  className="accent-[rgba(4,179,190,1)] w-5 h-5 mr-2"
+                  style={{ accentColor: 'rgba(4,179,190,1)' }}
+                />
+                <label htmlFor="no-pii-checkbox" className="text-gray-700 text-sm select-none cursor-pointer">
+                  I confirm no patient-identifiable information has been entered
+                </label>
+              </div>
               <ProcessButton
                 onClick={handleProcess}
-                disabled={isProcessing || !medicalNotes.trim()}
+                disabled={isProcessing || !medicalNotes.trim() || !confirmNoPII}
                 loading={isProcessing}
               />
             </section>
             {/* Output Section */}
-            <section className="h-[100%] bg-white rounded-2xl p-6 flex flex-col gap-6 border border-gray-400 min-h-[300px] max-h-[80vh] overflow-auto">
+            <section className="h-[100%] bg-white rounded-2xl p-5 flex flex-col gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] overflow-auto">
               <AISummaryOutput
                 summary={summary}
                 onCopy={handleCopy}
