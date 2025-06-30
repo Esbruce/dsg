@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "./components/Header";
 import MedicalNotesInput from "./components/MedicalNotesInput";
 import ProcessButton from "./components/ProcessButton";
@@ -16,6 +16,7 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmNoPII, setConfirmNoPII] = useState(false);
+  const aiSummaryRef = useRef<HTMLDivElement>(null);
 
   const handleProcess = async () => {
     if (!medicalNotes.trim()) {
@@ -50,6 +51,10 @@ export default function Home() {
       if (error) {
         alert("Failed to save to database: " + error.message);
       }
+      // Scroll to AI Summary box
+      setTimeout(() => {
+        aiSummaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err) {
       alert("Unexpected error: " + (err as Error).message);
     } finally {
@@ -76,9 +81,9 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
           <Header />
           <div className="mb-8" />
-          <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 items-start min-h-[50vh]">
+          <div className="w-full max-w-5xl flex flex-col gap-6 items-center min-h-[50vh]">
             {/* Input Section */}
-            <section className="h-[100%] bg-white rounded-2xl flex flex-col p-5 gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] text-center">
+            <section className="w-full bg-white rounded-2xl flex flex-col p-5 gap-5 border border-gray-400 min-h-[140px] max-h-[32vh] text-center">
               <MedicalNotesInput
                 value={medicalNotes}
                 onChange={(e) => setMedicalNotes(e.target.value)}
@@ -105,7 +110,7 @@ export default function Home() {
               />
             </section>
             {/* Output Section */}
-            <section className="h-[100%] bg-white rounded-2xl p-5 flex flex-col gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] overflow-auto">
+            <section ref={aiSummaryRef} className="w-full bg-white rounded-2xl p-5 flex flex-col gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] overflow-auto">
               <AISummaryOutput
                 summary={summary}
                 onCopy={handleCopy}
