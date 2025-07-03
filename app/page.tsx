@@ -81,16 +81,16 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center px-2 py-8">
           <Header />
           <div className="mb-8" />
-          <div className="w-full max-w-5xl flex flex-col gap-6 items-center min-h-[50vh]">
+          <div className="w-full max-w-5xl flex flex-col gap-8 items-center min-h-[50vh]">
             {/* Input Section */}
-            <section className="w-full bg-white rounded-2xl flex flex-col p-5 gap-5 border border-gray-400 min-h-[140px] max-h-[32vh] text-center">
+            <section className="w-full bg-white rounded-2xl flex flex-col p-6 gap-4 shadow-sm min-h-[400px] max-h-[80vh] text-center">
               <MedicalNotesInput
                 value={medicalNotes}
                 onChange={(e) => setMedicalNotes(e.target.value)}
                 onClear={() => setMedicalNotes("")}
                 characterCount={medicalNotes.length}
               />
-              <div className="flex items-center justify-center mb-2">
+              <div className="flex items-center justify-start mb-2">
                 <input
                   id="no-pii-checkbox"
                   type="checkbox"
@@ -110,7 +110,7 @@ export default function Home() {
               />
             </section>
             {/* Output Section */}
-            <section ref={aiSummaryRef} className="w-full bg-white rounded-2xl p-5 flex flex-col gap-5 border border-gray-400 min-h-[270px] max-h-[70vh] overflow-auto">
+            <section ref={aiSummaryRef} className="w-full bg-white rounded-2xl p-5 flex flex-col gap-5 shadow-sm min-h-[270px] max-h-[70vh] overflow-auto">
               <AISummaryOutput
                 summary={summary}
                 onCopy={handleCopy}

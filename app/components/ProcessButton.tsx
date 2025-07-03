@@ -11,8 +11,8 @@ export default function ProcessButton({ onClick, disabled, loading }: ProcessBut
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${disabled ? 'bg-gray-400' : ''}`}
-      style={!disabled ? { background: 'rgba(4,179,190,1)' } : {}}
+      className={`w-full text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 active:scale-100 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-xl ${!loading ? 'animate-pulse' : ''}`}
+      style={!disabled ? { background: 'rgba(4,179,190,1)' } : { background: '#b2e4e6' }}
     >
       {loading ? (
         <div className="flex items-center justify-center">
@@ -27,7 +27,7 @@ export default function ProcessButton({ onClick, disabled, loading }: ProcessBut
           <svg className="w-5 h-5 mr-2" fill="none" stroke="rgba(4,179,190,1)" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          Create Summary
+          <span className="text-xl italic">Create Summary</span>
         </div>
       )}
     </button>

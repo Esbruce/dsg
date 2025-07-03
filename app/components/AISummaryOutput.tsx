@@ -34,7 +34,7 @@ export default function AISummaryOutput({ summary, onCopy, copied, characterCoun
         value={summary}
         onChange={onSummaryChange}
         placeholder="Summary will appear here..."
-        className="w-full h-48 p-4 border border-gray-400 rounded-xl resize-none text-gray-700 placeholder-gray-400 focus:outline-none bg-gray-50 whitespace-pre-wrap leading-relaxed overflow-auto mb-2"
+        className="w-full h-48 p-4 rounded-xl resize-none text-gray-700 placeholder-gray-400 focus:outline-none bg-gray-50 whitespace-pre-wrap leading-relaxed overflow-auto mb-2 shadow-sm"
       />
       <div className="flex justify-between items-center mb-4">
         <span className="text-sm text-gray-500">{characterCount} characters</span>
@@ -50,11 +50,17 @@ export default function AISummaryOutput({ summary, onCopy, copied, characterCoun
         </button>
       </div>
       {/* Discharge Plan Box */}
+      <h2 className="text-lg font-medium text-left text-gray-900 flex flex-row items-center mb-4" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+        <svg className="w-6 h-6 mr-2" fill="none" stroke="rgba(4,179,190,1)" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Discharge Plan
+      </h2>
       <textarea
         value={dischargePlan}
         onChange={e => setDischargePlan(e.target.value)}
         placeholder="Discharge plan will appear here..."
-        className="w-full h-24 p-4 border border-gray-400 rounded-xl resize-none text-gray-700 placeholder-gray-400 focus:outline-none bg-gray-50 whitespace-pre-wrap leading-relaxed overflow-auto mb-2"
+        className="w-full h-24 p-4 rounded-xl resize-none text-gray-700 placeholder-gray-400 focus:outline-none bg-gray-50 whitespace-pre-wrap leading-relaxed overflow-auto mb-2 shadow-sm"
       />
       <div className="flex justify-end">
         <button
