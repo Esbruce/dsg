@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
-
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -39,7 +39,7 @@ export async function signup(formData: FormData) {
     redirect('/error')
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email: data.email,
     password: data.password,
   })
@@ -48,5 +48,20 @@ export async function signup(formData: FormData) {
     redirect('/error')
   }
 
-  redirect('/confirm')
+  // Create user in public users table
+  if (signUpData.user?.id) {
+    const { error: userError } = await supabaseAdmin
+      .from('users')
+      .insert([{ 
+        id: signUpData.user.id,
+        referred_by: null // or get from formData if you have this field
+      }])
+
+    if (userError) {
+      console.error('Error creating user:', userError)
+      // You might want to handle this error differently
+    }
+  }
+
+  redirect('/')
 }

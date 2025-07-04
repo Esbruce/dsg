@@ -8,7 +8,8 @@ export async function middleware(request: NextRequest) {
   // Allow public access to /confirm and /error
   if (
     pathname.startsWith('/confirm') ||
-    pathname.startsWith('/error')
+    pathname.startsWith('/error') ||
+    pathname.startsWith('/api/stripe/webhook')
   ) {
     return NextResponse.next()
   }
