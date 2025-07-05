@@ -2,15 +2,36 @@ import React from "react";
 import Image from "next/image";
 
 export default function Header() {
-  /* Simplified header, invite functionality removed */
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-white/80 backdrop-blur-md shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          <Image src="/dsg_logo.jpg" alt="DSG Logo" width={160} height={60} className="object-contain" priority />
-          <span className="text-sm md:text-base text-gray-700 font-medium tracking-wide whitespace-nowrap ml-2" style={{ fontFamily: 'Inter, sans-serif' }}>Built by doctors. Powered by AI.</span>
-        </div>
-        <div className="flex-1" />
+    <header className="w-full bg-gradient-to-b from-slate-300 to-transparent pb-10">
+      <div className="py-4 px-4 lg:px-8 flex items-center justify-end gap-6">
+        <nav className="flex items-center gap-8">
+          <button className="text-white hover:text-gray-300 transition-colors font-medium">
+            Billing
+          </button>
+          <button className="text-white hover:text-gray-300 transition-colors font-medium">
+            Feedback
+          </button>
+          <button className="text-white hover:text-gray-300 transition-colors font-medium">
+            About
+          </button>
+          <button className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="text-white"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+        </nav>
       </div>
     </header>
   );

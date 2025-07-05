@@ -26,6 +26,19 @@ export async function login(formData: FormData) {
   redirect('/')
 }
 
+export async function logout() {
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.signOut()
+
+  if (error) {
+    redirect('/error')
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/login')
+}
+
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 

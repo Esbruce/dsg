@@ -12,6 +12,7 @@ export type Database = {
       records: {
         Row: {
           created_at: string
+          discharge_plan: string | null
           id: string
           medical_notes: string
           responses: string | null
@@ -20,6 +21,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discharge_plan?: string | null
           id?: string
           medical_notes: string
           responses?: string | null
@@ -28,11 +30,48 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discharge_plan?: string | null
           id?: string
           medical_notes?: string
           responses?: string | null
           summary?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string
+          daily_usage_count: number | null
+          has_reffered_paid_user: boolean | null
+          id: string
+          is_paid: boolean | null
+          last_used_at: string | null
+          referred_by: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          daily_usage_count?: number | null
+          has_reffered_paid_user?: boolean | null
+          id: string
+          is_paid?: boolean | null
+          last_used_at?: string | null
+          referred_by?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          daily_usage_count?: number | null
+          has_reffered_paid_user?: boolean | null
+          id?: string
+          is_paid?: boolean | null
+          last_used_at?: string | null
+          referred_by?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Relationships: []
       }
@@ -114,7 +153,7 @@ export type TablesUpdate<
     ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] extends {
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U

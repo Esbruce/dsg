@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
 // Generate summary function with proper error handling
 async function generateSummary(user_id: string, medical_notes: string) {
     try {
-        // Call OpenAI directly to generate summary
-        const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        // Call OpenAI to generate discharge summary
+        const summaryRes = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -73,20 +73,91 @@ async function generateSummary(user_id: string, medical_notes: string) {
                 messages: [
                     {
                         role: 'system',
-                        content: `You are a clinical documentation AI assistant. Your task is to read and understand raw medical clerk notes (including patient history, physical exam findings, test results, treatment plans, and hospital course), and generate a clear, concise, and professionally written hospital discharge summary. The discharge summary should include structured sections such as Patient Information, Admission & Discharge dates, Admitting Diagnosis, Hospital Course, Investigations, Treatment Given, Discharge Medications, Follow-Up Plan, Condition on Discharge, Consultations, and Additional Notes. Follow professional medical tone, avoid hallucination, and fill only with documented data.`,
+                        content: `You are an expert medical discharge summary generator trained to produce discharge summaries in line with UK clinical practice standards. Your role is to convert detailed clarking notes into clear, concise, and professionally written discharge summaries suitable for both healthcare professionals and patients.
+
+The discharge summary must strictly follow this structure and wording format:
+
+Begin with the sentence:
+[Patient Name] attended [Hospital Name] on [Admission Date] with [Presenting Complaint].
+Provide a brief one or two sentence summary of the clinical presentation and any relevant background.
+
+In the next paragraph, describe the key investigations performed only including those that influenced diagnosis or management.
+👉 Do not include vital signs, routine observations, or non-significant/normal test results. Focus only on essential findings such as abnormal blood tests, relevant imaging, or diagnostic procedures.
+
+In a new paragraph, summarise the treatments provided during admission. Include key interventions such as medications, procedures, and any supportive care, written clearly and succinctly.
+
+In the next paragraph, summarise the advice given to the patient, including any safety netting, return precautions, and general guidance provided during the admission.
+
+Additional Instructions:
+• Write in full sentences with professional, formal language.
+• Do not use section headers—use paragraph breaks for flow.
+• Exclude vital signs, routine examination findings, and non-significant or normal investigation results.
+• Be concise but ensure all clinically relevant information is included.
+• Use plain English where possible while maintaining medical accuracy.
+• Assume the audience includes both healthcare professionals (particularly GPs) and the patient.`,
                     },
                     { role: 'user', content: medical_notes },
                 ],
             }),
         });
 
-        if (!openaiRes.ok) {
-            const errorText = await openaiRes.text();
-            throw new Error(`OpenAI API failed: ${openaiRes.status} - ${errorText}`);
+        if (!summaryRes.ok) {
+            const errorText = await summaryRes.text();
+            throw new Error(`OpenAI API failed: ${summaryRes.status} - ${errorText}`);
         }
 
-        const openaiData = await openaiRes.json();
-        const summary = (openaiData.choices?.[0]?.message?.content as string) || '';
+        const summaryData = await summaryRes.json();
+        const summary = (summaryData.choices?.[0]?.message?.content as string) || '';
+
+        // Call OpenAI to generate discharge plan
+        const dischargePlanRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are an expert medical discharge planning assistant trained to produce discharge plans in line with UK clinical practice standards. Your role is to convert detailed clarking notes into clear, actionable discharge plans for GPs and ongoing patient care.
+
+The discharge plan must strictly follow this structure:
+
+Start with a brief one-sentence context of the patient's presentation and admission.
+
+Then create a section titled "Plan" and present the GP plan in note form. Use concise phrases with improved grammar and punctuation, but do not rewrite in full prose as crucial clinical details could be missed. Keep it close to the original wording from the clarking notes while ensuring consistency, accuracy, and readability.
+
+Include the following elements where applicable:
+• Follow-up arrangements and timelines
+• Ongoing medication management
+• Monitoring requirements
+• Activity restrictions or recommendations
+• Safety netting and return precautions
+• Referrals to other services
+• Patient education and self-care instructions
+• Warning signs to watch for
+
+Additional Instructions:
+• Present the plan in note form with each point on a new line (no bullet points)
+• Do not attempt to rewrite or summarise the plan in full prose
+• Maintain clinical accuracy and include all relevant details from the original notes
+• Use professional medical language appropriate for GP communication
+• Ensure the plan is practical and actionable`,
+                    },
+                    { role: 'user', content: medical_notes },
+                ],
+            }),
+        });
+
+        if (!dischargePlanRes.ok) {
+            const errorText = await dischargePlanRes.text();
+            throw new Error(`OpenAI Discharge Plan API failed: ${dischargePlanRes.status} - ${errorText}`);
+        }
+
+        const dischargePlanData = await dischargePlanRes.json();
+        const dischargePlan = (dischargePlanData.choices?.[0]?.message?.content as string) || '';
 
         // Insert into Supabase
         const { error: insertError } = await supabaseAdmin
@@ -95,6 +166,7 @@ async function generateSummary(user_id: string, medical_notes: string) {
                 user_id,
                 medical_notes,
                 summary,
+                discharge_plan: dischargePlan,
                 responses: null,
             }]);
 
@@ -102,7 +174,7 @@ async function generateSummary(user_id: string, medical_notes: string) {
             throw new Error(`Database insert failed: ${insertError.message}`);
         }
 
-        return NextResponse.json({ summary });
+        return NextResponse.json({ summary, discharge_plan: dischargePlan });
 
     } catch (error) {
         console.error('Generate summary function error:', error);
