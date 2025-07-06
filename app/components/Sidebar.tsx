@@ -25,9 +25,9 @@ export default function Sidebar({
   onGoUnlimited
 }: SidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-80 bg-[var(--color-bg-1)] border-r border-[var(--color-neutral-200)] shadow-lg z-40 flex-col hidden lg:flex">
+    <aside className="w-80 h-full bg-[var(--color-bg-1)] border-r border-[var(--color-neutral-200)] shadow-lg flex flex-col">
       {/* Branding */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3 justify-center">
           <div>
             <h1 className="text-xl text-center font-bold text-gray-900">DSG</h1>
@@ -37,7 +37,7 @@ export default function Sidebar({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
         <Usage 
           usageCount={usageCount}
           maxUsage={maxUsage}

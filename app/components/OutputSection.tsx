@@ -28,26 +28,21 @@ export default function OutputSection({
   }
 
   return (
-    <div className="flex gap-6 h-full">
+    <div className="flex gap-8 h-full min-h-[600px]">
       {/* AI Summary Panel */}
-      <div className="flex-1 bg-white rounded-2xl shadow-lg border border-[var(--color-neutral-200)] p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric rounded-2xl p-8 flex flex-col">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            {/* <div className="p-2 bg-[var(--color-success)]/20 rounded-lg ">
-              <svg className="w-6 h-6 text-[var(--color-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div> */}
             <div>
-              <h2 className="text-xl font-semibold text-[var(--color-neutral-900)]">Summary</h2>
-              <p className="text-sm text-[var(--color-neutral-600)]">Generated medical summary</p>
+              <h2 className="text-2xl font-semibold text-[var(--color-neutral-900)]">Summary</h2>
+              <p className="text-base text-[var(--color-neutral-600)] mt-1">Generated medical summary</p>
             </div>
           </div>
           <button
             onClick={onCopySummary}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-light)] transition-colors font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary-light)] transition-colors font-medium text-base"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             {summaryCopied ? "Copied!" : "Copy"}
@@ -58,33 +53,28 @@ export default function OutputSection({
           value={summary}
           onChange={onSummaryChange}
           placeholder="AI summary will appear here..."
-          className="w-full p-4 rounded-xl border border-[var(--color-neutral-300)] focus:border-[var(--color-success)] focus:ring-2 focus:ring-[var(--color-success)]/20 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-0"
+          className="w-full p-6 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[400px] text-base leading-relaxed"
         />
         
-        <div className="mt-2 text-sm text-[var(--color-neutral-500)]">
+        <div className="mt-4 text-base text-[var(--color-neutral-500)] font-medium">
           {summary.length} characters
         </div>
       </div>
 
       {/* Discharge Plan Panel */}
-      <div className="flex-1 bg-white rounded-2xl shadow-lg border border-[var(--color-neutral-200)] p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric rounded-2xl p-8 flex flex-col">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            {/* <div className="p-2 bg-[var(--color-secondary)]/20 rounded-lg">
-              <svg className="w-6 h-6 text-[var(--color-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div> */}
             <div>
-              <h2 className="text-xl font-semibold text-[var(--color-neutral-900)]">Discharge Plan</h2>
-              <p className="text-sm text-[var(--color-neutral-600)]">Generated discharge planning</p>
+              <h2 className="text-2xl font-semibold text-[var(--color-neutral-900)]">Discharge Plan</h2>
+              <p className="text-base text-[var(--color-neutral-600)] mt-1">Generated discharge planning</p>
             </div>
           </div>
           <button
             onClick={onCopyDischargePlan}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-secondary)]/20 text-[var(--color-secondary)] rounded-lg hover:bg-[var(--color-secondary)]/30 transition-colors font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-[var(--color-secondary)]/20 text-[var(--color-secondary)] rounded-xl hover:bg-[var(--color-secondary)]/30 transition-colors font-medium text-base"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             {dischargePlanCopied ? "Copied!" : "Copy"}
@@ -95,10 +85,10 @@ export default function OutputSection({
           value={dischargePlan}
           onChange={onDischargePlanChange}
           placeholder="Discharge plan will appear here..."
-          className="w-full p-4 rounded-xl border border-[var(--color-neutral-300)] focus:border-[var(--color-secondary)] focus:ring-2 focus:ring-[var(--color-secondary)]/20 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-0"
+          className="w-full p-6 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[400px] text-base leading-relaxed"
         />
         
-        <div className="mt-2 text-sm text-[var(--color-neutral-500)]">
+        <div className="mt-4 text-base text-[var(--color-neutral-500)] font-medium">
           {dischargePlan.length} characters
         </div>
       </div>

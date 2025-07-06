@@ -2,7 +2,7 @@ import React from "react";
 
 export default function LoadingState() {
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-[var(--color-neutral-200)] p-8 space-y-6">
+    <div className="backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric rounded-2xl p-8 space-y-6">
       <div className="flex items-center justify-center">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full animate-pulse"></div>

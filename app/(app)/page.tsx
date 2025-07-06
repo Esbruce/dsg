@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import InputSection from "../components/InputSection";
 import OutputSection from "../components/OutputSection";
-import CollapsedInputTab from "../components/CollapsedInputTab";
 import LoadingState from "../components/LoadingState";
 import { createClient } from "../../lib/supabase/client";
 import "../globals.css";
+import Hero from "../components/Hero";
 
 export default function Home() {
   const [medicalNotes, setMedicalNotes] = useState("");
@@ -14,10 +14,7 @@ export default function Home() {
   const [dischargePlan, setDischargePlan] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmNoPII, setConfirmNoPII] = useState(false);
-  
-  // UI State
-  const [showInputOnly, setShowInputOnly] = useState(true);
-  const [inputCollapsed, setInputCollapsed] = useState(false);
+  const [showOutput, setShowOutput] = useState(false);
   
   // Copy states
   const [summaryCopied, setSummaryCopied] = useState(false);
@@ -59,8 +56,6 @@ export default function Home() {
       if (!userStatus) {
         throw new Error("Invalid response from status check");
       }
-
-
 
       // 3. Redirect if over limit and not paid
       if (!userStatus.is_paid && userStatus.daily_usage_count >= 3) {
@@ -115,15 +110,21 @@ export default function Home() {
       setSummary(summaryText);
       setDischargePlan(dischargePlanText);
 
-      // 5. Update UI state - collapse input and show output
-      setShowInputOnly(false);
-      setInputCollapsed(true);
+      // 5. Show output section and scroll to it
+      setShowOutput(true);
 
     } catch (err) {
       alert("Unexpected error: " + (err as Error).message);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleClear = () => {
+    setMedicalNotes("");
+    setSummary("");
+    setDischargePlan("");
+    setShowOutput(false);
   };
 
   const handleCopySummary = async () => {
@@ -146,87 +147,70 @@ export default function Home() {
     }
   };
 
-  const handleExpandInput = () => {
-    setInputCollapsed(false);
-  };
-
-  const handleCollapseInput = () => {
-    setInputCollapsed(true);
-  };
-
   return (
-    <div className="max-w-4xl mx-auto h-full">
-          {/* Show input only on initial load */}
-          {showInputOnly && (
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="w-full">
-                
-                <InputSection
-                  medicalNotes={medicalNotes}
-                  onNotesChange={(e) => setMedicalNotes(e.target.value)}
-                  onClear={() => setMedicalNotes("")}
-                  confirmNoPII={confirmNoPII}
-                  onConfirmNoPIIChange={setConfirmNoPII}
-                  onProcess={handleProcess}
-                  isProcessing={isProcessing}
-                  isCollapsed={inputCollapsed}
-                  onCollapse={handleCollapseInput}
-                />
-              </div>
+    <div className="h-full flex flex-col pb-[5vw] px-[10vw]">
+      {/* Hero Section - Only visible when not showing output */}
+      {!showOutput && (
+        <section className="px-6 py-6 flex-shrink-0">
+          <Hero />
+        </section>
+      )}
+
+      {/* Input Section - Only visible when not processing and not showing output */}
+      {!isProcessing && !showOutput && (
+        <section className="flex-1">
+          <InputSection
+            medicalNotes={medicalNotes}
+            onNotesChange={(e) => setMedicalNotes(e.target.value)}
+            onClear={handleClear}
+            confirmNoPII={confirmNoPII}
+            onConfirmNoPIIChange={setConfirmNoPII}
+            onProcess={handleProcess}
+            isProcessing={isProcessing}
+          />
+        </section>
+      )}
+
+      {/* Processing State - Only visible when processing */}
+      {isProcessing && (
+        <section className="flex-1 flex items-center justify-center">
+          <div className="max-w-4xl mx-auto px-6">
+            <LoadingState />
+          </div>
+        </section>
+      )}
+
+      {/* Output Section - Only visible when showing output and not processing */}
+      {showOutput && !isProcessing && (
+        <section className="flex-1 flex flex-col">
+          <div className="mb-6 px-6">
+            <button
+              onClick={() => setShowOutput(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-lg transition-colors shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Input
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto px-6 pb-8">
+            <div className="max-w-6xl mx-auto">
+              <OutputSection
+                summary={summary}
+                dischargePlan={dischargePlan}
+                onSummaryChange={(e) => setSummary(e.target.value)}
+                onDischargePlanChange={(e) => setDischargePlan(e.target.value)}
+                onCopySummary={handleCopySummary}
+                onCopyDischargePlan={handleCopyDischargePlan}
+                summaryCopied={summaryCopied}
+                dischargePlanCopied={dischargePlanCopied}
+                isVisible={showOutput}
+              />
             </div>
-          )}
-
-          {/* Show collapsed input tab and output after processing */}
-          {!showInputOnly && (
-            <div className="py-8 h-full flex flex-col">
-              {/* Collapsed Input Tab */}
-              {inputCollapsed && (
-                <CollapsedInputTab
-                  onClick={handleExpandInput}
-                  characterCount={medicalNotes.length}
-                />
-              )}
-
-              {/* Expanded Input Section */}
-              {!inputCollapsed && (
-                <div className="mb-8">
-                  <InputSection
-                    medicalNotes={medicalNotes}
-                    onNotesChange={(e) => setMedicalNotes(e.target.value)}
-                    onClear={() => setMedicalNotes("")}
-                    confirmNoPII={confirmNoPII}
-                    onConfirmNoPIIChange={setConfirmNoPII}
-                    onProcess={handleProcess}
-                    isProcessing={isProcessing}
-                    isCollapsed={inputCollapsed}
-                    onCollapse={handleCollapseInput}
-                  />
-                </div>
-              )}
-
-              {/* Processing State */}
-              {isProcessing && (
-                <LoadingState />
-              )}
-
-              {/* Output Section */}
-              {!isProcessing && (summary || dischargePlan) && (
-                <div className="flex-1 flex flex-col">
-                  <OutputSection
-                    summary={summary}
-                    dischargePlan={dischargePlan}
-                    onSummaryChange={(e) => setSummary(e.target.value)}
-                    onDischargePlanChange={(e) => setDischargePlan(e.target.value)}
-                    onCopySummary={handleCopySummary}
-                    onCopyDischargePlan={handleCopyDischargePlan}
-                    summaryCopied={summaryCopied}
-                    dischargePlanCopied={dischargePlanCopied}
-                    isVisible={true}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
