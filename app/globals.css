@@ -1,18 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  /* Design tokens */
-  --color-primary: #04B3BE;
-  --color-primary-dark: #03A1AC;
-  --color-accent: #F9A26C;
-  --color-gray-50: #F4F7F8;
-  --color-gray-200: #E8EFF1;
-  --color-gray-700: #374151;
 
-  /* Background / text */
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Border Thickness */
+--rotating-border-thickness: 1px;
+--color-border-1: #e8f5fe80;
+--color-border-2: #b0b5c8;
+--color-border-3: #a9c5e1;
+--color-border-4: #8ab6fc;
+
+  /* Primary Colors */
+--color-primary: #02cdca;      /* Your current teal */
+--color-primary-dark: #03A1AC;
+--color-primary-light: #E6F8FA;
+--color-blocked: #eeeeee;
+
+--color-process-1: #06fffb;
+--color-process-2: #0066ff;
+--color-process-3: #0109e6;
+--color-process-4: #b101e6;
+--color-process-5: #e601de;
+
+/* Secondary Colors */
+--color-secondary: #00aaed;    /* Lighter teal */
+--color-accent: #F59E0B;       /* Warmer orange */
+
+/* Neutral Colors */
+--color-neutral-50: #F8FAFC;
+--color-neutral-100: #F1F5F9;
+--color-neutral-200: #E2E8F0;
+--color-neutral-300: #CBD5E1;
+--color-neutral-400: #94A3B8;
+--color-neutral-500: #64748B;
+--color-neutral-600: #475569;
+--color-neutral-700: #334155;
+--color-neutral-800: #1E293B;
+--color-neutral-900: #0F172A;
+
+/* Status Colors */
+--color-success: #10B981;
+--color-warning: #F59E0B;
+--color-error: #EF4444;
+--color-info: #3B82F6;
+
+--color-bg-1: #f9fafa;
+--color-bg-2: #f1f7fa;
+--color-bg-3: #f7fafc;
+--color-bg-4: #eaf2fc;
+--color-bg-5: #94A3B8;
+--color-bg-6: #64748B;
+--color-bg-7: #00275e;
+
+--color-usage-1: #dcf3ff39;
+--color-usage-2: #a6caf029;
+--color-usage-3: #0109e6;
+--color-usage-4: #b101e6;
+--color-usage-5: #e601de; 
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -80,3 +125,108 @@ body {
 .animate-fadein {
   animation: fadein 0.7s cubic-bezier(.4,0,.2,1);
 }
+
+/* Rotating Gradient Border Effect */
+@keyframes rotate-gradient {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating-gradient-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.rotating-gradient-border::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: conic-gradient(
+    from 0deg,
+    var(--color-primary),
+    var(--color-secondary),
+    var(--color-primary-dark),
+    var(--color-accent),
+    var(--color-primary)
+  );
+  border-radius: inherit;
+  animation: rotate-gradient 1s linear infinite;
+  z-index: 1;
+}
+
+.rotating-gradient-border::after {
+  content: '';
+  position: absolute;
+  top: var(--rotating-border-thickness);
+  left: var(--rotating-border-thickness);
+  right: var(--rotating-border-thickness);
+  bottom: var(--rotating-border-thickness);
+  background: white;
+  border-radius: calc(1rem - var(--rotating-border-thickness));
+  z-index: 2;
+}
+
+/* Pause animation if user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .rotating-gradient-border::before {
+    animation: none;
+  }
+}
+
+/* Variant with slower rotation for subtle effect */
+.rotating-gradient-border-slow {
+  position: relative;
+  overflow: hidden;
+}
+
+.rotating-gradient-border-slow::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: conic-gradient(
+    from 0deg,
+    var(--color-border-1),
+    var(--color-border-2),
+    var(--color-border-3),
+    var(--color-border-4),
+    var(--color-border-1)
+  );
+  border-radius: inherit;
+  animation: rotate-gradient 30s linear infinite;
+  z-index: 1;
+}
+
+.rotating-gradient-border-slow::after {
+  content: '';
+  position: absolute;
+  top: var(--rotating-border-thickness);
+  left: var(--rotating-border-thickness);
+  right: var(--rotating-border-thickness);
+  bottom: var(--rotating-border-thickness);
+  background: white;
+  border-radius: calc(1rem - var(--rotating-border-thickness));
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotating-gradient-border-slow::before {
+    animation: none;
+  }
+}
+
+/* Custom symmetric shadow */
+.shadow-symmetric {
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.062), 0 0 40px rgba(0, 0, 0, 0.034);
+}
+
+

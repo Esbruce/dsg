@@ -155,11 +155,11 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto ">
+    <div className="max-w-4xl mx-auto h-full">
           {/* Show input only on initial load */}
           {showInputOnly && (
             <div className="flex items-center justify-center min-h-screen">
-              <div className="w-full max-w-2xl">
+              <div className="w-full">
                 
                 <InputSection
                   medicalNotes={medicalNotes}
@@ -178,7 +178,7 @@ export default function Home() {
 
           {/* Show collapsed input tab and output after processing */}
           {!showInputOnly && (
-            <div className="py-8">
+            <div className="py-8 h-full flex flex-col">
               {/* Collapsed Input Tab */}
               {inputCollapsed && (
                 <CollapsedInputTab
@@ -211,17 +211,19 @@ export default function Home() {
 
               {/* Output Section */}
               {!isProcessing && (summary || dischargePlan) && (
-                <OutputSection
-                  summary={summary}
-                  dischargePlan={dischargePlan}
-                  onSummaryChange={(e) => setSummary(e.target.value)}
-                  onDischargePlanChange={(e) => setDischargePlan(e.target.value)}
-                  onCopySummary={handleCopySummary}
-                  onCopyDischargePlan={handleCopyDischargePlan}
-                  summaryCopied={summaryCopied}
-                  dischargePlanCopied={dischargePlanCopied}
-                  isVisible={true}
-                />
+                <div className="flex-1 flex flex-col">
+                  <OutputSection
+                    summary={summary}
+                    dischargePlan={dischargePlan}
+                    onSummaryChange={(e) => setSummary(e.target.value)}
+                    onDischargePlanChange={(e) => setDischargePlan(e.target.value)}
+                    onCopySummary={handleCopySummary}
+                    onCopyDischargePlan={handleCopyDischargePlan}
+                    summaryCopied={summaryCopied}
+                    dischargePlanCopied={dischargePlanCopied}
+                    isVisible={true}
+                  />
+                </div>
               )}
             </div>
           )}

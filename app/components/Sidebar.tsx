@@ -25,7 +25,7 @@ export default function Sidebar({
   onGoUnlimited
 }: SidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-80 bg-white border-r border-gray-200 shadow-lg z-40 flex-col hidden lg:flex">
+    <aside className="fixed left-0 top-0 h-full w-80 bg-[var(--color-bg-1)] border-r border-[var(--color-neutral-200)] shadow-lg z-40 flex-col hidden lg:flex">
       {/* Branding */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center gap-3 justify-center">

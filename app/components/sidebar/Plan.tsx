@@ -7,21 +7,20 @@ type PlanProps = {
 
 export default function Plan({ isPaid, onGoUnlimited }: PlanProps) {
   if (isPaid) {
-    return (
-      <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="p-1 bg-white/20 rounded-lg">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="font-bold">Pro Member</h3>
-        </div>
-        <p className="text-sm text-green-100">
-          You have unlimited access to all features
-        </p>
-      </div>
-    );
+    return ( null )
+    //   <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-xl p-4 text-white">
+    //     <div className="flex items-center gap-2 mb-2">
+    //       <div className="p-1 bg-white/20 rounded-lg">
+    //         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    //           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    //         </svg>
+    //       </div>
+    //       <h3 className="font-bold">Pro Member</h3>
+    //     </div>
+    //     <p className="text-sm text-green-100">
+    //       You have unlimited access to all features
+    //     </p>
+    //   </div>
   }
 
   return (

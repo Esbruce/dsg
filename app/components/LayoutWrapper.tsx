@@ -106,7 +106,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse mx-auto mb-4"></div>
+          <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full animate-pulse mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -116,14 +116,14 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   if (!isAuthenticated) {
     // For unauthenticated users, render without sidebar
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-pink-600">
+      <div className="min-h-screen bg-gradient-to-br from-[var(--color-bg-1)] via-[var(--color-bg-2)] to-[var(--color-bg-1)]">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-300 via-slate-200 to-slate-100">
+    <div className="flex min-h-screen bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)]">
       {/* Sidebar */}
       <Sidebar
         usageCount={usageCount}
@@ -143,7 +143,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         </div>
         
         {/* Content with padding to account for fixed header */}
-        <div className="pt-20 p-4 lg:p-8 flex-1">
+        <div>
           {children}
         </div>
       </main>
