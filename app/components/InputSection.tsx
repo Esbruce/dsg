@@ -36,7 +36,7 @@ export default function InputSection({
               />
             </div> 
             {/* Character Count & Clear Button */}
-            <div className="flex justify-between items-center mt-4">
+            <div className="flex justify-between items-center m-2">
               <span className="text-[var(--color-neutral-400)] text-base font-medium">{medicalNotes.length} characters</span>
               {medicalNotes.length > 0 && (
                 <button
@@ -91,7 +91,7 @@ export default function InputSection({
               className={`group px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center gap-3 shadow-lg ${
                 isProcessing || !medicalNotes.trim() || !confirmNoPII
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-slate-900 to-slate-800 text-white hover:from-slate-800 hover:to-slate-700 hover:shadow-xl hover:shadow-slate-900/20 cursor-pointer'
+                  : 'bg-gradient-to-r from-slate-900 to-slate-800 text-white hover:from-slate-800 hover:to-slate-700 cursor-pointer'
               }`}
             >
               {isProcessing ? (
@@ -104,12 +104,12 @@ export default function InputSection({
                 </>
               ) : (
                 <>
-                  {/* <div className="w-5 h-5 relative">
+                  <div className="w-5 h-5 relative">
                     <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                  </div> */}
-                 Generate {/* Generate Summary & Discharge Plan */}
+                  </div>
+                 Generate Summary & Plan
                 </>
               )}
             </button>

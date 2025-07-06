@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { createClient } from "../../lib/supabase/client";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+
+// Create context for user data refresh
+const UserDataContext = createContext<{
+  refreshUserData: () => void;
+}>({
+  refreshUserData: () => {},
+});
+
+// Export hook for using the context
+export const useUserData = () => useContext(UserDataContext);
 
 export default function AppLayout({
   children,
@@ -20,42 +30,43 @@ export default function AppLayout({
   const maxUsage = 3;
   const inviteLink = "https://dsg.com/invite/user123"; // This should be dynamic based on user
 
+  // Fetch user data function
+  const fetchUserData = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+
+      // Fetch user status
+      const statusRes = await fetch("/api/user/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+
+      if (statusRes.ok) {
+        const { user: userStatus } = await statusRes.json();
+        if (userStatus) {
+          setUsageCount(userStatus.daily_usage_count || 0);
+          setIsPaid(userStatus.is_paid || false);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch user data on component mount
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-
-        setIsAuthenticated(true);
-
-        // Fetch user status
-        const statusRes = await fetch("/api/user/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id }),
-        });
-
-        if (statusRes.ok) {
-          const { user: userStatus } = await statusRes.json();
-          if (userStatus) {
-            setUsageCount(userStatus.daily_usage_count || 0);
-            setIsPaid(userStatus.is_paid || false);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchUserData();
   }, []);
 
@@ -144,7 +155,9 @@ export default function AppLayout({
         
         {/* Content Area - Scrollable */}
         <main className="flex-1 overflow-auto">
-          {children}
+          <UserDataContext.Provider value={{ refreshUserData: fetchUserData }}>
+            {children}
+          </UserDataContext.Provider>
         </main>
       </div>
     </div>

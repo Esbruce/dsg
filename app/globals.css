@@ -10,7 +10,7 @@
 --color-border-4: #8ab6fc;
 
   /* Primary Colors */
---color-primary: #02cdca;      /* Your current teal */
+--color-primary: #00c6c6;      /* Your current teal */
 --color-primary-dark: #03A1AC;
 --color-primary-light: #E6F8FA;
 --color-blocked: #eeeeee;
@@ -22,7 +22,7 @@
 --color-process-5: #e601de;
 
 /* Secondary Colors */
---color-secondary: #00aaed;    /* Lighter teal */
+--color-secondary: #00edd9;    /* Lighter teal */
 --color-accent: #F59E0B;       /* Warmer orange */
 
 /* Neutral Colors */
@@ -43,10 +43,10 @@
 --color-error: #EF4444;
 --color-info: #3B82F6;
 
---color-bg-1: #f9fafa;
---color-bg-2: #f1f7fa;
---color-bg-3: #f7fafc;
---color-bg-4: #eaf2fc;
+--color-bg-1: #f6fcff;
+--color-bg-2: #ffffff;
+--color-bg-3: #fafdff;
+--color-bg-4: #ffffff;
 --color-bg-5: #94A3B8;
 --color-bg-6: #64748B;
 --color-bg-7: #00275e;
@@ -83,6 +83,15 @@ body {
   color: var(--foreground);
   /* Inter as primary, fall back to system sans */
   font-family: Inter, var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Global button cursor styles */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 /* Custom Scrollbar Styles */

@@ -7,6 +7,8 @@ import LoadingState from "../components/LoadingState";
 import { createClient } from "../../lib/supabase/client";
 import "../globals.css";
 import Hero from "../components/Hero";
+import Limit from "../components/Limit";
+import { useUserData } from "./layout";
 
 export default function Home() {
   const [medicalNotes, setMedicalNotes] = useState("");
@@ -19,6 +21,12 @@ export default function Home() {
   // Copy states
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [dischargePlanCopied, setDischargePlanCopied] = useState(false);
+  
+  // Rate limit state
+  const [showLimitOverlay, setShowLimitOverlay] = useState(false);
+  
+  // Get refresh function from context
+  const { refreshUserData } = useUserData();
 
   const handleProcess = async () => {
     if (!medicalNotes.trim()) {
@@ -57,32 +65,11 @@ export default function Home() {
         throw new Error("Invalid response from status check");
       }
 
-      // 3. Redirect if over limit and not paid
+      // 3. Show limit overlay if over limit and not paid
       if (!userStatus.is_paid && userStatus.daily_usage_count >= 3) {
-        const checkoutRes = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id }),
-        });
-
-        if (!checkoutRes.ok) {
-          throw new Error(`Checkout failed: ${checkoutRes.status} ${checkoutRes.statusText}`);
-        }
-
-        let checkoutData;
-        try {
-          const checkoutText = await checkoutRes.text();
-          checkoutData = checkoutText ? JSON.parse(checkoutText) : {};
-        } catch (err) {
-          throw new Error("Invalid response from checkout");
-        }
-
-        if (checkoutData.url) {
-          window.location.href = checkoutData.url;
-          return;
-        } else {
-          throw new Error("No checkout URL received");
-        }
+        setShowLimitOverlay(true);
+        setIsProcessing(false);
+        return;
       }
 
       // 4. Call generate-summary API (handles quota, OpenAI, and DB insertion)
@@ -112,6 +99,9 @@ export default function Home() {
 
       // 5. Show output section and scroll to it
       setShowOutput(true);
+
+      // 6. Refresh user data to update usage count in sidebar
+      refreshUserData();
 
     } catch (err) {
       alert("Unexpected error: " + (err as Error).message);
@@ -147,10 +137,52 @@ export default function Home() {
     }
   };
 
+  const handleUpgrade = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      const user_id = user?.id;
+
+      if (!user_id) {
+        alert("User not authenticated");
+        return;
+      }
+
+      const checkoutRes = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id }),
+      });
+
+      if (!checkoutRes.ok) {
+        throw new Error(`Checkout failed: ${checkoutRes.status} ${checkoutRes.statusText}`);
+      }
+
+      const checkoutData = await checkoutRes.json();
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err) {
+      alert("Error redirecting to checkout: " + (err as Error).message);
+    }
+  };
+
+  const handleCloseLimitOverlay = () => {
+    setShowLimitOverlay(false);
+  };
+
   return (
     <div className="h-full flex flex-col pb-[5vw] px-[10vw]">
+      {/* Rate Limit Overlay */}
+      <Limit 
+        isVisible={showLimitOverlay}
+        onUpgrade={handleUpgrade}
+        onClose={handleCloseLimitOverlay}
+      />
       {/* Hero Section - Only visible when not showing output */}
-      {!showOutput && (
+      {!showOutput && !isProcessing && (
         <section className="px-6 py-6 flex-shrink-0">
           <Hero />
         </section>
@@ -173,8 +205,8 @@ export default function Home() {
 
       {/* Processing State - Only visible when processing */}
       {isProcessing && (
-        <section className="flex-1 flex items-center justify-center">
-          <div className="max-w-4xl mx-auto px-6">
+        <section className=" w-full h-full flex-1 flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center">
             <LoadingState />
           </div>
         </section>
@@ -183,17 +215,6 @@ export default function Home() {
       {/* Output Section - Only visible when showing output and not processing */}
       {showOutput && !isProcessing && (
         <section className="flex-1 flex flex-col">
-          <div className="mb-6 px-6">
-            <button
-              onClick={() => setShowOutput(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-lg transition-colors shadow-sm"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Input
-            </button>
-          </div>
           <div className="flex-1 overflow-auto px-6 pb-8">
             <div className="max-w-6xl mx-auto">
               <OutputSection
@@ -206,6 +227,7 @@ export default function Home() {
                 summaryCopied={summaryCopied}
                 dischargePlanCopied={dischargePlanCopied}
                 isVisible={showOutput}
+                onBackToInput={() => setShowOutput(false)}
               />
             </div>
           </div>

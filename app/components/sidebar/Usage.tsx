@@ -36,7 +36,9 @@ export default function Usage({ usageCount, maxUsage, isPaid }: UsageProps) {
         <>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-[var(--color-neutral-900)]">{maxUsage - usageCount}</span>
-            <span className="text-sm text-[var(--color-neutral-600)]">summaries left</span>
+            <span className="text-sm text-[var(--color-neutral-600)]">
+              {maxUsage - usageCount === 1 ? 'summary left' : 'summaries left'}
+            </span>
           </div>
           <div className="mt-2 bg-[var(--color-neutral-200)] rounded-full h-2">
             <div 
