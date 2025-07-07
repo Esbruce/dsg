@@ -48,7 +48,7 @@ export default function AppLayout({
       const statusRes = await fetch("/api/user/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id }),
+        body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
       if (statusRes.ok) {
@@ -82,19 +82,10 @@ export default function AppLayout({
 
   const handleGoUnlimited = async () => {
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const user_id = user?.id;
-
-      if (!user_id) {
-        alert("User not authenticated");
-        return;
-      }
-
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id }),
+        body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
       if (!checkoutRes.ok) {

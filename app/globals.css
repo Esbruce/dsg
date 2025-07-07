@@ -44,7 +44,7 @@
 --color-info: #3B82F6;
 
 --color-bg-1: #f6fcff;
---color-bg-2: #ffffff;
+--color-bg-2: #ececec;
 --color-bg-3: #fafdff;
 --color-bg-4: #ffffff;
 --color-bg-5: #94A3B8;
@@ -235,7 +235,7 @@ button:disabled {
 
 /* Custom symmetric shadow */
 .shadow-symmetric {
-  box-shadow: 0 0 25px rgba(0, 0, 0, 0.062), 0 0 40px rgba(0, 0, 0, 0.034);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.062), 0 0 40px rgba(0, 0, 0, 0.034);
 }
 
 

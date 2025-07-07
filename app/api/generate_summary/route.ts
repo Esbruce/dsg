@@ -1,54 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import dayjs from 'dayjs';
 
 export async function POST(req: NextRequest) {
     try {
-        const { user_id, medical_notes } = await req.json();
+        // 🔒 SECURITY: Verify authenticated user from session
+        const supabase = await createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (!user_id || !medical_notes) {
-            return NextResponse.json({ error: 'Missing user_id or medical_notes' }, { status: 400 });
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        // Parse only non-sensitive data from request body
+        const { medical_notes } = await req.json();
+
+        if (!medical_notes) {
+            return NextResponse.json({ error: 'Missing medical_notes' }, { status: 400 });
+        }
+
+        // Use authenticated user's ID (not from request body)
+        const authenticatedUserId = user.id;
 
         const freeQuota = 3;
 
         // Get the user's records
-        const { data: user, error: userError } = await supabaseAdmin
+        const { data: userData, error: userError } = await supabaseAdmin
             .from('users')
             .select('daily_usage_count, last_used_at, is_paid')
-            .eq('id', user_id)
+            .eq('id', authenticatedUserId)
             .single();
 
-        if (userError || !user) {
+        if (userError || !userData) {
             return NextResponse.json({ error: userError?.message || 'User not found' }, { status: 404 });
         }
 
         // Paid users bypass the usage limit
-        if (user.is_paid) {
-            return await generateSummary(user_id, medical_notes);
+        if (userData.is_paid) {
+            return await generateSummary(authenticatedUserId, medical_notes);
         }
 
         const today = dayjs().format('YYYY-MM-DD');
-        const lastUsedAt = user.last_used_at ? dayjs(user.last_used_at).format('YYYY-MM-DD') : null;
+        const lastUsedAt = userData.last_used_at ? dayjs(userData.last_used_at).format('YYYY-MM-DD') : null;
 
         if (lastUsedAt !== today) {
             // New day -> reset counter to 1
             await supabaseAdmin
                 .from('users')
                 .update({daily_usage_count: 1, last_used_at: today})
-                .eq('id', user_id);
-        } else if (user.daily_usage_count >= freeQuota) {
+                .eq('id', authenticatedUserId);
+        } else if (userData.daily_usage_count >= freeQuota) {
             // Limit reached 
             return NextResponse.json({ error: 'Usage limit reached' }, { status: 403 });
         } else {
             // Same day -> increment counter
             await supabaseAdmin
                 .from('users')
-                .update({daily_usage_count: user.daily_usage_count + 1})
-                .eq('id', user_id);
+                .update({daily_usage_count: userData.daily_usage_count + 1})
+                .eq('id', authenticatedUserId);
         }
 
-        return await generateSummary(user_id, medical_notes);
+        return await generateSummary(authenticatedUserId, medical_notes);
 
     } catch (error) {
         console.error('Generate summary API error:', error);

@@ -83,6 +83,32 @@ export async function POST(req: NextRequest) {
       break;
     }
 
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+
+      // Handle subscription status changes
+      if (subscription.status === 'active') {
+        // Subscription is active - user should have access
+        await supabaseAdmin
+          .from('users')
+          .update({ is_paid: true })
+          .eq('stripe_customer_id', customerId);
+      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        // Subscription is cancelled or unpaid - revoke access
+        await supabaseAdmin
+          .from('users')
+          .update({ is_paid: false })
+          .eq('stripe_customer_id', customerId);
+      }
+
+      // Note: We don't change is_paid when cancel_at_period_end is true
+      // because the user should keep access until the period actually ends
+      // The customer.subscription.deleted event will handle the final cancellation
+
+      break;
+    }
+
     case 'invoice.created': {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;

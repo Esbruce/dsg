@@ -37,22 +37,11 @@ export default function Home() {
     setIsProcessing(true);
 
     try {
-      // 1. Get user_id from Supabase session
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const user_id = user?.id;
-
-      if (!user_id) {
-        alert("User not authenticated");
-        setIsProcessing(false);
-        return;
-      }
-
-      // 2. Check user status
+      // 1. Check user status (server-side authenticated)
       const statusRes = await fetch("/api/user/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id }),
+        body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
       if (!statusRes.ok) {
@@ -65,18 +54,18 @@ export default function Home() {
         throw new Error("Invalid response from status check");
       }
 
-      // 3. Show limit overlay if over limit and not paid
+      // 2. Show limit overlay if over limit and not paid
       if (!userStatus.is_paid && userStatus.daily_usage_count >= 3) {
         setShowLimitOverlay(true);
         setIsProcessing(false);
         return;
       }
 
-      // 4. Call generate-summary API (handles quota, OpenAI, and DB insertion)
+      // 3. Call generate-summary API (handles quota, OpenAI, and DB insertion)
       const summaryRes = await fetch("/api/generate_summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, medical_notes: medicalNotes }),
+        body: JSON.stringify({ medical_notes: medicalNotes }),  // No user_id needed - authenticated server-side
       });
 
       let summaryData;
@@ -97,10 +86,10 @@ export default function Home() {
       setSummary(summaryText);
       setDischargePlan(dischargePlanText);
 
-      // 5. Show output section and scroll to it
+      // 4. Show output section and scroll to it
       setShowOutput(true);
 
-      // 6. Refresh user data to update usage count in sidebar
+      // 5. Refresh user data to update usage count in sidebar
       refreshUserData();
 
     } catch (err) {
@@ -139,19 +128,10 @@ export default function Home() {
 
   const handleUpgrade = async () => {
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const user_id = user?.id;
-
-      if (!user_id) {
-        alert("User not authenticated");
-        return;
-      }
-
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id }),
+        body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
       if (!checkoutRes.ok) {

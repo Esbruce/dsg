@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 
 type PlanProps = {
   isPaid: boolean;
@@ -6,21 +7,30 @@ type PlanProps = {
 };
 
 export default function Plan({ isPaid, onGoUnlimited }: PlanProps) {
+  const router = useRouter();
+
   if (isPaid) {
-    return ( null )
-    //   <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-xl p-4 text-white">
-    //     <div className="flex items-center gap-2 mb-2">
-    //       <div className="p-1 bg-white/20 rounded-lg">
-    //         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    //           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    //         </svg>
-    //       </div>
-    //       <h3 className="font-bold">Pro Member</h3>
-    //     </div>
-    //     <p className="text-sm text-green-100">
-    //       You have unlimited access to all features
-    //     </p>
-    //   </div>
+    return (
+      <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-xl p-4 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="p-1 bg-white/20 rounded-lg">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="font-bold">Pro Member</h3>
+        </div>
+        <p className="text-sm text-green-100 mb-3">
+          You have unlimited access to all features
+        </p>
+        <button 
+          onClick={() => router.push('/billing')}
+          className="w-full bg-white/20 hover:bg-white/30 text-white font-medium py-2 px-3 rounded-lg transition-colors text-sm"
+        >
+          Manage Billing
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -31,7 +41,7 @@ export default function Plan({ isPaid, onGoUnlimited }: PlanProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <h3 className="font-bold text-lg">Upgrade</h3>
+        <h3 className="font-bold text-lg">Upgrade to Unlimited</h3>
       </div>
       
       <div className="space-y-2 mb-4">
