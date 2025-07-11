@@ -1,15 +1,33 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { createClient } from "../../lib/supabase/client";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
-// Create context for user data refresh
-const UserDataContext = createContext<{
-  refreshUserData: () => void;
-}>({
-  refreshUserData: () => {},
+// Enhanced context interface
+interface UserDataContextType {
+  // Basic user data
+  userEmail: string | null;
+  usageCount: number;
+  isPaid: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  
+  // Actions
+  refreshUserData: () => Promise<void>;
+  refreshAll: () => Promise<void>;
+}
+
+// Create enhanced context
+const UserDataContext = createContext<UserDataContextType>({
+  userEmail: null,
+  usageCount: 0,
+  isPaid: false,
+  isLoading: true,
+  isAuthenticated: false,
+  refreshUserData: async () => {},
+  refreshAll: async () => {},
 });
 
 // Export hook for using the context
@@ -20,9 +38,10 @@ export default function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // User data states
+  // User data states (keep existing pattern for animations)
   const [usageCount, setUsageCount] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,7 +49,7 @@ export default function AppLayout({
   const maxUsage = 3;
   const inviteLink = "https://dsg.com/invite/user123"; // This should be dynamic based on user
 
-  // Fetch user data function
+  // Enhanced fetch user data function
   const fetchUserData = async () => {
     try {
       const supabase = createClient();
@@ -38,11 +57,13 @@ export default function AppLayout({
       
       if (!user) {
         setIsAuthenticated(false);
+        setUserEmail(null);
         setIsLoading(false);
         return;
       }
 
       setIsAuthenticated(true);
+      setUserEmail(user.email || null);
 
       // Fetch user status
       const statusRes = await fetch("/api/user/status", {
@@ -64,6 +85,17 @@ export default function AppLayout({
       setIsLoading(false);
     }
   };
+
+  // Stable context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    userEmail,
+    usageCount,
+    isPaid,
+    isLoading,
+    isAuthenticated,
+    refreshUserData: fetchUserData,
+    refreshAll: fetchUserData, // For now, same as refreshUserData
+  }), [userEmail, usageCount, isPaid, isLoading, isAuthenticated]);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -126,7 +158,7 @@ export default function AppLayout({
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)] overflow-hidden">
-      {/* Sidebar - Fixed width */}
+      {/* Sidebar - Fixed width - Keep props flow for animations */}
       <Sidebar
         usageCount={usageCount}
         maxUsage={maxUsage}
@@ -146,7 +178,7 @@ export default function AppLayout({
         
         {/* Content Area - Scrollable */}
         <main className="flex-1 overflow-auto">
-          <UserDataContext.Provider value={{ refreshUserData: fetchUserData }}>
+          <UserDataContext.Provider value={contextValue}>
             {children}
           </UserDataContext.Provider>
         </main>

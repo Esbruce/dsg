@@ -7,8 +7,8 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-light)]">
-      <div className="bg-white shadow-xl border border-[var(--color-primary-light)] rounded-2xl p-10 w-full max-w-md transition-shadow hover:shadow-[var(--color-primary-light)]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[var(--color-bg-1)] to-[var(--color-bg-2)]">
+      <div className="bg-white shadow-xl rounded-2xl p-10 w-full max-w-md transition-shadow shadow-symmetric">
 
         {/* Login and Signup toggle buttons */}
 
@@ -34,7 +34,7 @@ export default function LoginPage() {
 
         <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-[var(--color-primary-light)] to-transparent mb-6" />
         {mode === 'login' && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in ">
             <h2 className="text-2xl font-bold mb-2 text-center text-[var(--color-primary-dark)]">Sign in</h2>
             <p className="text-center text-[var(--color-neutral-500)] mb-6 text-sm">Welcome back! Please enter your details below.</p>
             <form className="flex flex-col gap-5">

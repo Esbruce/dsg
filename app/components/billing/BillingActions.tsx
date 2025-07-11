@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { SubscriptionData } from "../../(app)/billing/types";
 
 interface BillingActionsProps {
@@ -9,12 +10,12 @@ interface BillingActionsProps {
   onCancelSubscription: () => void;
 }
 
-export default function BillingActions({ 
+const BillingActions = React.memo(({ 
   subscriptionData, 
   cancelling, 
   onManagePayment, 
   onCancelSubscription 
-}: BillingActionsProps) {
+}: BillingActionsProps) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[var(--color-neutral-200)] p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Billing Actions</h2>
@@ -60,4 +61,7 @@ export default function BillingActions({
       </div>
     </div>
   );
-} 
+});
+
+BillingActions.displayName = 'BillingActions';
+export default BillingActions; 

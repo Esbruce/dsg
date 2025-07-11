@@ -3,16 +3,16 @@
 :root {
 
   /* Border Thickness */
---rotating-border-thickness: 1px;
+--rotating-border-thickness: 5px;
 --color-border-1: #e8f5fe80;
 --color-border-2: #b0b5c8;
 --color-border-3: #a9c5e1;
 --color-border-4: #8ab6fc;
 
   /* Primary Colors */
---color-primary: #00c6c6;      /* Your current teal */
+--color-primary: #00a8a8;      /* Your current teal */
 --color-primary-dark: #03A1AC;
---color-primary-light: #E6F8FA;
+--color-primary-light: #03A8A8;
 --color-blocked: #eeeeee;
 
 --color-process-1: #06fffb;
@@ -222,7 +222,7 @@ button:disabled {
   left: var(--rotating-border-thickness);
   right: var(--rotating-border-thickness);
   bottom: var(--rotating-border-thickness);
-  background: white;
+  background: rgba(255, 255, 255, 0.998);
   border-radius: calc(1rem - var(--rotating-border-thickness));
   z-index: 2;
 }

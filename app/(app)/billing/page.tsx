@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "../../../lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useUserData } from "../layout";
 
 // Types
-import { UserStatus, SubscriptionData } from "./types";
+import { SubscriptionData } from "./types";
 
 // Components
 import BillingHeader from "../../components/billing/BillingHeader";
-import BillingSkeleton, { BillingContentSkeleton } from "../../components/billing/BillingSkeleton";
+import { BillingContentSkeleton } from "../../components/billing/BillingSkeleton";
 import ErrorState from "../../components/billing/ErrorState";
 import UpgradeCard from "../../components/billing/UpgradeCard";
 import SubscriptionStatus from "../../components/billing/SubscriptionStatus";
@@ -18,51 +17,27 @@ import PaymentMethod from "../../components/billing/PaymentMethod";
 import BillingActions from "../../components/billing/BillingActions";
 
 export default function BillingPage() {
-  // State
-  const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
+  // Local state (subscription data only)
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // Context data
+  const { isPaid, isLoading, refreshUserData, refreshAll } = useUserData();
+
   // Hooks
   const router = useRouter();
-  const { refreshUserData } = useUserData();
 
   // Effects
   useEffect(() => {
-    fetchUserStatus();
-  }, []);
+    // Only fetch subscription details if user is paid and data is loaded
+    if (!isLoading && isPaid && !subscriptionData) {
+      fetchSubscriptionDetails();
+    }
+  }, [isPaid, isLoading, subscriptionData]);
 
   // Data fetching functions
-  const fetchUserStatus = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/user/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),  // No user_id needed - authenticated server-side
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user status');
-      }
-
-      const data = await response.json();
-      setUserStatus(data.user);
-
-      // Only fetch subscription details if user is paid
-      if (data.user.is_paid) {
-        await fetchSubscriptionDetails();
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchSubscriptionDetails = async () => {
     setLoadingSubscription(true);
     try {
@@ -146,9 +121,9 @@ export default function BillingPage() {
         throw new Error('Failed to cancel subscription');
       }
 
-      // Refresh both user status and subscription data
-      await fetchUserStatus();
-      refreshUserData(); // Update sidebar and header
+      // Refresh all data and fetch updated subscription details
+      await refreshAll();
+      await fetchSubscriptionDetails();
       alert('Your subscription has been scheduled for cancellation at the end of your current billing period.');
     } catch (err) {
       alert('Error cancelling subscription: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -168,9 +143,9 @@ export default function BillingPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <BillingHeader />
 
-        {loading ? (
+        {isLoading ? (
           <BillingContentSkeleton />
-        ) : !userStatus?.is_paid ? (
+        ) : !isPaid ? (
           <UpgradeCard onUpgrade={handleUpgrade} />
         ) : (
           <div className="space-y-6">

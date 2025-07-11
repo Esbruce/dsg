@@ -1,12 +1,13 @@
 "use client";
 
+import React from 'react';
 import { SubscriptionData } from "../../(app)/billing/types";
 
 interface PaymentMethodProps {
   subscriptionData: SubscriptionData | null;
 }
 
-export default function PaymentMethod({ subscriptionData }: PaymentMethodProps) {
+const PaymentMethod = React.memo(({ subscriptionData }: PaymentMethodProps) => {
   if (!subscriptionData?.paymentMethod) {
     return null;
   }
@@ -33,4 +34,7 @@ export default function PaymentMethod({ subscriptionData }: PaymentMethodProps) 
       </div>
     </div>
   );
-} 
+});
+
+PaymentMethod.displayName = 'PaymentMethod';
+export default PaymentMethod; 

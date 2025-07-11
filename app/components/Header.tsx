@@ -1,51 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { createClient } from "../../lib/supabase/client";
 import { logout } from "../login/actions";
 import { useRouter } from "next/navigation";
+import { useUserData } from "../(app)/layout";
 
 export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [isPaid, setIsPaid] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  // Fetch user data
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          setUserEmail(user.email || "");
-          
-          // Fetch user status for plan info
-          const statusRes = await fetch("/api/user/status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),  // No user_id needed - authenticated server-side
-          });
-
-          if (statusRes.ok) {
-            const { user: userStatus } = await statusRes.json();
-            if (userStatus) {
-              setIsPaid(userStatus.is_paid || false);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
+  
+  // Use context data instead of fetching independently
+  const { userEmail, isPaid, isLoading } = useUserData();
 
   // Close dropdown when clicking outside
   useEffect(() => {

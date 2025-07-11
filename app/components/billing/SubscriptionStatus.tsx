@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { SubscriptionData } from "../../(app)/billing/types";
 
 interface SubscriptionStatusProps {
@@ -7,10 +8,10 @@ interface SubscriptionStatusProps {
   loadingSubscription: boolean;
 }
 
-export default function SubscriptionStatus({ 
+const SubscriptionStatus = React.memo(({ 
   subscriptionData, 
   loadingSubscription 
-}: SubscriptionStatusProps) {
+}: SubscriptionStatusProps) => {
   const formatPrice = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -84,4 +85,7 @@ export default function SubscriptionStatus({
       )}
     </div>
   );
-} 
+});
+
+SubscriptionStatus.displayName = 'SubscriptionStatus';
+export default SubscriptionStatus; 
