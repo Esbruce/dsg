@@ -71,6 +71,19 @@ export async function POST(req: NextRequest) {
       break;
     }
 
+    case 'customer.subscription.created': {
+      const subscription = event.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+
+      // Ensure user is marked as paid when subscription is created
+      await supabaseAdmin
+        .from('users')
+        .update({ is_paid: true })
+        .eq('stripe_customer_id', customerId);
+
+      break;
+    }
+
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
@@ -94,8 +107,8 @@ export async function POST(req: NextRequest) {
           .from('users')
           .update({ is_paid: true })
           .eq('stripe_customer_id', customerId);
-      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-        // Subscription is cancelled or unpaid - revoke access
+      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
+        // Subscription is cancelled, unpaid, or past due - revoke access
         await supabaseAdmin
           .from('users')
           .update({ is_paid: false })
@@ -105,6 +118,33 @@ export async function POST(req: NextRequest) {
       // Note: We don't change is_paid when cancel_at_period_end is true
       // because the user should keep access until the period actually ends
       // The customer.subscription.deleted event will handle the final cancellation
+
+      break;
+    }
+
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId = invoice.customer as string;
+
+      // Ensure user access is restored when payment succeeds
+      await supabaseAdmin
+        .from('users')
+        .update({ is_paid: true })
+        .eq('stripe_customer_id', customerId);
+
+      break;
+    }
+
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId = invoice.customer as string;
+
+      // Revoke access when payment fails for any invoice
+      // (This is safe since we're dealing with subscription-based service)
+      await supabaseAdmin
+        .from('users')
+        .update({ is_paid: false })
+        .eq('stripe_customer_id', customerId);
 
       break;
     }
