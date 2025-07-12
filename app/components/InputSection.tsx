@@ -32,12 +32,21 @@ export default function InputSection({
                 value={medicalNotes}
                 onChange={onNotesChange}
                 placeholder="Enter your medical documentation here ..."
+                maxLength={50000}
                 className="w-full h-full p-6 rounded-2xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-black placeholder-[var(--color-neutral-400)] text-xl relative z-[3] flex-1 leading-relaxed"
               />
             </div> 
             {/* Character Count & Clear Button */}
             <div className="flex justify-between items-center m-2">
-              <span className="text-[var(--color-neutral-400)] text-base font-medium">{medicalNotes.length} characters</span>
+              <span className={`text-base font-medium ${
+                medicalNotes.length > 45000 
+                  ? 'text-[var(--color-error)]' 
+                  : medicalNotes.length > 40000 
+                    ? 'text-[var(--color-warning)]' 
+                    : 'text-[var(--color-neutral-400)]'
+              }`}>
+                {medicalNotes.length} / 50,000 characters
+              </span>
               {medicalNotes.length > 0 && (
                 <button
                   onClick={onClear}
@@ -53,9 +62,9 @@ export default function InputSection({
           </div>
 
           {/* Privacy Confirmation & Process Button Row */}
-          <div className="flex items-stretch justify-between gap-4 flex-shrink-0">
+          <div className="flex flex-col xl:flex-row xl:items-stretch xl:justify-between gap-4 flex-shrink-0">
             {/* Privacy Confirmation */}
-            <div className="flex items-center gap-3 p-4 bg-[var(--color-warning)]/20 border border-[var(--color-warning)]/50 rounded-xl backdrop-blur-sm flex-1">
+            <div className="flex items-center gap-3 p-4 bg-[var(--color-warning)]/20 border border-[var(--color-warning)]/50 rounded-xl backdrop-blur-sm xl:flex-1">
               <div className="relative">
                 <input
                   id="no-pii-checkbox"

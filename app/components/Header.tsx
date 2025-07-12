@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { logout } from "../login/actions";
+import { logout } from "@/app/login/actions";
 import { useRouter } from "next/navigation";
 import { useUserData } from "../(app)/layout";
 
@@ -12,6 +12,11 @@ export default function Header() {
   
   // Use context data instead of fetching independently
   const { userEmail, isPaid, isLoading } = useUserData();
+  
+  // Debug logging
+  console.log("🔍 Header component - isLoading:", isLoading);
+  console.log("🔍 Header component - userEmail:", userEmail);
+  console.log("🔍 Header component - isPaid:", isPaid);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -55,9 +60,6 @@ export default function Header() {
             className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium"
           >
             Billing
-          </button>
-          <button className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium">
-            About
           </button>
           
           {/* User Dropdown */}

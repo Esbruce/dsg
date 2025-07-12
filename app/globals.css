@@ -238,4 +238,31 @@ button:disabled {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.062), 0 0 40px rgba(0, 0, 0, 0.034);
 }
 
+/* Desktop-only viewport restriction */
+.desktop-only-overlay {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .main-app-content {
+    display: none !important;
+  }
+  
+  .desktop-only-overlay {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, var(--color-bg-1) 0%, var(--color-bg-3) 100%);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+  }
+}
+
 

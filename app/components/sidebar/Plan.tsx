@@ -60,7 +60,7 @@ export default function Plan({ isPaid, onGoUnlimited }: PlanProps) {
         </div>
       <div className="bg-white/10 rounded-lg p-3 mb-4">
         <div className="text-center">
-          <div className="text-2xl font-bold">£2.99</div>
+          <div className="text-2xl font-bold">£1.99</div>
           <div className="text-xs text-purple-200">per month</div>
         </div>
       </div>

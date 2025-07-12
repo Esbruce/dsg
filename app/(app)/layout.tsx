@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { createClient } from "../../lib/supabase/client";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import DesktopOnlyOverlay from "../components/DesktopOnlyOverlay";
 
 // Enhanced context interface
 interface UserDataContextType {
@@ -78,9 +79,15 @@ export default function AppLayout({
           setUsageCount(userStatus.daily_usage_count || 0);
           setIsPaid(userStatus.is_paid || false);
         }
+      } else {
+        // Set default values on API failure
+        setUsageCount(0);
+        setIsPaid(false);
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      // Error logged server-side if needed
+      setUsageCount(0);
+      setIsPaid(false);
     } finally {
       setIsLoading(false);
     }
@@ -157,32 +164,36 @@ export default function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)] overflow-hidden">
-      {/* Sidebar - Fixed width - Keep props flow for animations */}
-      <Sidebar
-        usageCount={usageCount}
-        maxUsage={maxUsage}
-        inviteLink={inviteLink}
-        onCopyInviteLink={handleCopyInviteLink}
-        inviteLinkCopied={inviteLinkCopied}
-        isPaid={isPaid}
-        onGoUnlimited={handleGoUnlimited}
-      />
+    <UserDataContext.Provider value={contextValue}>
+      {/* Desktop-only overlay for small screens */}
+      <DesktopOnlyOverlay />
+      
+      {/* Main app content - hidden on mobile */}
+      <div className="main-app-content flex h-screen bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)] overflow-hidden">
+        {/* Sidebar - Fixed width - Keep props flow for animations */}
+        <Sidebar
+          usageCount={usageCount}
+          maxUsage={maxUsage}
+          inviteLink={inviteLink}
+          onCopyInviteLink={handleCopyInviteLink}
+          inviteLinkCopied={inviteLinkCopied}
+          isPaid={isPaid}
+          onGoUnlimited={handleGoUnlimited}
+        />
 
-      {/* Main Content Area - Takes remaining space */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header - Fixed at top */}
-        <div className="flex-shrink-0 z-50">
-          <Header />
-        </div>
-        
-        {/* Content Area - Scrollable */}
-        <main className="flex-1 overflow-auto">
-          <UserDataContext.Provider value={contextValue}>
+        {/* Main Content Area - Takes remaining space */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header - Fixed at top */}
+          <div className="flex-shrink-0 z-50">
+            <Header />
+          </div>
+          
+          {/* Content Area - Scrollable */}
+          <main className="flex-1 overflow-auto">
             {children}
-          </UserDataContext.Provider>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </UserDataContext.Provider>
   );
 } 

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('Subscription cancellation error:', err);
     return NextResponse.json({ 
-      error: err.message || 'Failed to cancel subscription' 
+      error: 'Failed to cancel subscription. Please try again.' 
     }, { status: 500 });
   }
 } 

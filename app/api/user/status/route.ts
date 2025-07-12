@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
         console.error('User status error:', err);
         return NextResponse.json({ 
-            error: err.message || 'Failed to fetch user status' 
+            error: 'Failed to fetch user status. Please try again.' 
         }, { status: 500 });
     }
 }

@@ -16,9 +16,28 @@ export async function POST(req: NextRequest) {
         // Parse only non-sensitive data from request body
         const { medical_notes } = await req.json();
 
+        // Input validation
         if (!medical_notes) {
             return NextResponse.json({ error: 'Missing medical_notes' }, { status: 400 });
         }
+
+        if (typeof medical_notes !== 'string') {
+            return NextResponse.json({ error: 'Medical notes must be a string' }, { status: 400 });
+        }
+
+        if (medical_notes.trim().length === 0) {
+            return NextResponse.json({ error: 'Medical notes cannot be empty' }, { status: 400 });
+        }
+
+        if (medical_notes.length > 50000) {
+            return NextResponse.json({ error: 'Medical notes too long (max 50,000 characters)' }, { status: 400 });
+        }
+
+        // Basic content sanitization - remove potentially harmful patterns
+        const sanitizedNotes = medical_notes
+            .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+            .replace(/<[^>]*>/g, '') // Remove HTML tags
+            .trim();
 
         // Use authenticated user's ID (not from request body)
         const authenticatedUserId = user.id;
@@ -38,7 +57,7 @@ export async function POST(req: NextRequest) {
 
         // Paid users bypass the usage limit
         if (userData.is_paid) {
-            return await generateSummary(authenticatedUserId, medical_notes);
+            return await generateSummary(authenticatedUserId, sanitizedNotes, medical_notes);
         }
 
         const today = dayjs().format('YYYY-MM-DD');
@@ -61,18 +80,18 @@ export async function POST(req: NextRequest) {
                 .eq('id', authenticatedUserId);
         }
 
-        return await generateSummary(authenticatedUserId, medical_notes);
+        return await generateSummary(authenticatedUserId, sanitizedNotes, medical_notes);
 
     } catch (error) {
         console.error('Generate summary API error:', error);
         return NextResponse.json({ 
-            error: 'Internal server error: ' + (error as Error).message 
+            error: 'An error occurred while processing your request. Please try again.' 
         }, { status: 500 });
     }
 }
 
 // Generate summary function with proper error handling
-async function generateSummary(user_id: string, medical_notes: string) {
+async function generateSummary(user_id: string, sanitized_notes: string, original_medical_notes: string) {
     try {
         // Call OpenAI to generate discharge summary
         const summaryRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -109,7 +128,7 @@ Additional Instructions:
 • Use plain English where possible while maintaining medical accuracy.
 • Assume the audience includes both healthcare professionals (particularly GPs) and the patient.`,
                     },
-                    { role: 'user', content: medical_notes },
+                    { role: 'user', content: sanitized_notes },
                 ],
             }),
         });
@@ -159,7 +178,7 @@ Additional Instructions:
 • Use professional medical language appropriate for GP communication
 • Ensure the plan is practical and actionable`,
                     },
-                    { role: 'user', content: medical_notes },
+                    { role: 'user', content: sanitized_notes },
                 ],
             }),
         });
@@ -172,12 +191,12 @@ Additional Instructions:
         const dischargePlanData = await dischargePlanRes.json();
         const dischargePlan = (dischargePlanData.choices?.[0]?.message?.content as string) || '';
 
-        // Insert into Supabase
+        // Insert into Supabase (store original medical_notes for record keeping)
         const { error: insertError } = await supabaseAdmin
             .from('records')
             .insert([{
                 user_id,
-                medical_notes,
+                medical_notes: original_medical_notes,
                 summary,
                 discharge_plan: dischargePlan,
                 responses: null,

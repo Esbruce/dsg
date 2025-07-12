@@ -31,7 +31,7 @@ export default function Sidebar({
         <div className="flex items-center gap-3 justify-center">
           <div>
             <h1 className="text-xl text-center font-bold text-gray-900">DSG</h1>
-            <p className="text-sm text-gray-600">AI Medical Summary</p>
+            <p className="text-sm text-gray-600">Discharge Summary Generator</p>
           </div>
         </div>
       </div>
@@ -49,11 +49,11 @@ export default function Sidebar({
           onGoUnlimited={onGoUnlimited}
         />
 
-        <Invite 
+        {/* <Invite 
           inviteLink={inviteLink}
           onCopyInviteLink={onCopyInviteLink}
           inviteLinkCopied={inviteLinkCopied}
-        />
+        /> */}
       </div>
     </aside>
   );
