@@ -1,5 +1,8 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Medical Notes Summarizer
+AI-powered medical notes summarization tool for healthcare professionals.
+
 ## Getting Started
 
 First, run the development server:
