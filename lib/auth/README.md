@@ -1,6 +1,6 @@
 # Authentication System
 
-This directory contains the authentication system for the DSG application, including OTP (One-Time Password) functionality with rate limiting and CAPTCHA support.
+This directory contains the authentication system for the DSG application, including OTP (One-Time Password) functionality with rate limiting.
 
 ## Architecture Overview
 
@@ -8,9 +8,8 @@ The authentication system follows a conventional pattern with:
 
 - **Server-side OTP service** (`otp.ts`) - Handles Supabase OTP operations
 - **Client-side hooks and service** (`otp-client.ts`) - React hooks and API client
-- **API routes** (`/api/auth/*`) - HTTP endpoints with rate limiting and CAPTCHA
+- **API routes** (`/api/auth/*`) - HTTP endpoints with rate limiting
 - **Rate limiting** (`rate-limiter.ts`) - Prevents abuse of OTP endpoints
-- **CAPTCHA verification** (`captcha.ts`) - Google reCAPTCHA integration
 
 ## Files Structure
 
@@ -33,9 +32,6 @@ app/api/auth/
 Add these to your `.env.local` file:
 
 ```bash
-# Google reCAPTCHA (required for CAPTCHA verification)
-RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key_here
-
 # Supabase (already configured)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -49,7 +45,6 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```typescript
 import { otpService } from '@/lib/auth/otp'
 import { otpRateLimiter } from '@/lib/auth/rate-limiter'
-import { captchaVerifier } from '@/lib/auth/captcha'
 
 // Send OTP
 const result = await otpService.sendOTP(phoneNumber)
@@ -59,9 +54,6 @@ const result = await otpService.verifyOTP(phoneNumber, otp)
 
 // Check rate limit
 const rateLimitResult = otpRateLimiter.check(req, phoneNumber)
-
-// Verify CAPTCHA
-const captchaResult = await captchaVerifier.verifyRecaptcha(token, clientIP)
 ```
 
 ### Client-side (React components)
@@ -78,13 +70,13 @@ const { state, updateState } = useOTPState()
 const { otpTimer, startTimers } = useOTPTimers()
 
 // Send OTP
-const result = await otpClientService.sendOTP(phoneNumber, captchaToken)
+const result = await otpClientService.sendOTP(phoneNumber)
 
 // Verify OTP
 const result = await otpClientService.verifyOTP(phoneNumber, otp)
 
 // Resend OTP
-const result = await otpClientService.resendOTP(phoneNumber, captchaToken)
+const result = await otpClientService.resendOTP(phoneNumber)
 ```
 
 ## Rate Limiting
@@ -97,22 +89,14 @@ The system includes three rate limiters:
 
 Rate limits are applied per phone number and IP address.
 
-## CAPTCHA Integration
 
-The system supports Google reCAPTCHA v2 and v3:
-
-- **reCAPTCHA v2**: Checkbox or invisible CAPTCHA
-- **reCAPTCHA v3**: Score-based verification (recommended)
-
-CAPTCHA tokens are verified server-side for security.
 
 ## Security Features
 
 1. **Rate Limiting**: Prevents abuse of OTP endpoints
-2. **CAPTCHA Verification**: Stops automated attacks
-3. **Server-side Validation**: All validation happens on the server
-4. **IP Tracking**: Rate limits consider both phone number and IP
-5. **Secure Headers**: Proper error handling and status codes
+2. **Server-side Validation**: All validation happens on the server
+3. **IP Tracking**: Rate limits consider both phone number and IP
+4. **Secure Headers**: Proper error handling and status codes
 
 ## API Endpoints
 
@@ -122,8 +106,7 @@ Send OTP to a phone number.
 **Request:**
 ```json
 {
-  "phoneNumber": "+1234567890",
-  "captchaToken": "optional_captcha_token"
+  "phoneNumber": "+1234567890"
 }
 ```
 
@@ -163,8 +146,7 @@ Resend OTP to a phone number.
 **Request:**
 ```json
 {
-  "phoneNumber": "+1234567890",
-  "captchaToken": "optional_captcha_token"
+  "phoneNumber": "+1234567890"
 }
 ```
 
@@ -196,6 +178,5 @@ Common error status codes:
 
 1. **Redis**: Replace in-memory rate limiting with Redis for production
 2. **Monitoring**: Add logging and monitoring for rate limit violations
-3. **CAPTCHA**: Configure reCAPTCHA with appropriate domain restrictions
-4. **SMS Provider**: Ensure your SMS provider has proper rate limiting
-5. **HTTPS**: Always use HTTPS in production for secure communication 
+3. **SMS Provider**: Ensure your SMS provider has proper rate limiting
+4. **HTTPS**: Always use HTTPS in production for secure communication 

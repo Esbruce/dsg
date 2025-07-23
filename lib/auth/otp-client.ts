@@ -14,9 +14,9 @@ export interface OTPState {
 }
 
 export interface OTPActions {
-  sendOTP: (phoneNumber: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
+  sendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
   verifyOTP: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; session?: any; remaining?: number; resetTime?: number }>
-  resendOTP: (phoneNumber: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
+  resendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
   resetOTPState: () => void
 }
 
@@ -113,7 +113,7 @@ export class OTPClientService {
   /**
    * Send OTP via API route
    */
-  async sendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+  async sendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
     try {
       // Import the client-side Supabase client
       const { createClient } = await import('@/lib/supabase/client')
@@ -241,7 +241,7 @@ export class OTPClientService {
   /**
    * Resend OTP via API route
    */
-  async resendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+  async resendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
     try {
       // Import the client-side Supabase client
       const { createClient } = await import('@/lib/supabase/client')

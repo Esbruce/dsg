@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { otpService } from '@/lib/auth/otp'
 import { resendRateLimiter } from '@/lib/auth/rate-limiter'
-import { captchaVerifier, getClientIP } from '@/lib/auth/captcha'
 
 export async function POST(req: NextRequest) {
   try {
-    const { phoneNumber, captchaToken } = await req.json()
+    const { phoneNumber } = await req.json()
 
     // Validate required fields
     if (!phoneNumber) {
@@ -13,19 +12,6 @@ export async function POST(req: NextRequest) {
         { error: 'Phone number is required' },
         { status: 400 }
       )
-    }
-
-    // Verify CAPTCHA if token provided
-    if (captchaToken) {
-      const clientIP = getClientIP(req)
-      const captchaResult = await captchaVerifier.verifyRecaptcha(captchaToken, clientIP)
-      
-      if (!captchaResult.success) {
-        return NextResponse.json(
-          { error: captchaResult.error || 'CAPTCHA verification failed' },
-          { status: 400 }
-        )
-      }
     }
 
     // Check rate limit
