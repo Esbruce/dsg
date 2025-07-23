@@ -179,37 +179,11 @@ export default function AppLayout({
     }
   }, []); // Empty dependency array since this function doesn't depend on any state
 
-  // Enhanced refresh function with immediate polling
-  const refreshUserDataWithPolling = useCallback(async () => {
-    console.log('🔄 Starting enhanced refresh with polling...');
+  // Simple refresh function without polling
+  const refreshUserData = useCallback(async () => {
+    console.log('🔄 Refreshing user data...');
     await fetchUserData();
-    
-    // If user is authenticated, do an immediate follow-up check for payment status
-    if (isAuthenticated) {
-      setTimeout(async () => {
-        try {
-          console.log('🔄 Immediate payment status check...');
-          const statusRes = await fetch("/api/user/status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          });
-          
-          if (statusRes.ok) {
-            const { user: userStatus } = await statusRes.json();
-            if (userStatus) {
-              if (userStatus.is_paid !== isPaid || userStatus.daily_usage_count !== usageCount) {
-                setUsageCount(userStatus.daily_usage_count || 0);
-                setIsPaid(userStatus.is_paid || false);
-              }
-            }
-          }
-        } catch (error) {
-          // Silent fail for immediate check
-        }
-      }, 1000); // Check again after 1 second
-    }
-  }, [fetchUserData, isAuthenticated, isPaid, usageCount]);
+  }, [fetchUserData]);
 
   // For unauthenticated users, use mock data but show full interface
   const displayUsageCount = isAuthenticated ? usageCount : 0; // 0 summaries used = 3 remaining
@@ -226,11 +200,11 @@ export default function AppLayout({
       isPaid: displayIsPaid,
       isLoading,
       isAuthenticated,
-      refreshUserData: refreshUserDataWithPolling,
-      refreshAll: refreshUserDataWithPolling, // Use enhanced version
+      refreshUserData: refreshUserData,
+      refreshAll: refreshUserData,
     };
     return value;
-  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, refreshUserDataWithPolling]);
+  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, refreshUserData]);
 
   // Fetch user data on component mount and listen for auth changes
   useEffect(() => {
@@ -274,47 +248,10 @@ export default function AppLayout({
       }
     });
 
-    // Set up polling for payment status changes (useful for webhook delays)
-    let pollInterval: NodeJS.Timeout | null = null;
-    if (isAuthenticated) {
-      pollInterval = setInterval(async () => {
-        try {
-          console.log('🔄 Polling for payment status changes...');
-          const statusRes = await fetch("/api/user/status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          });
-          
-          if (statusRes.ok) {
-            const { user: userStatus } = await statusRes.json();
-            if (userStatus) {
-              // Only update if there's a change to avoid unnecessary re-renders
-              if (userStatus.is_paid !== isPaid || userStatus.daily_usage_count !== usageCount) {
-                console.log('🔄 Payment status changed via polling:', {
-                  oldIsPaid: isPaid,
-                  newIsPaid: userStatus.is_paid,
-                  oldUsageCount: usageCount,
-                  newUsageCount: userStatus.daily_usage_count
-                });
-                setUsageCount(userStatus.daily_usage_count || 0);
-                setIsPaid(userStatus.is_paid || false);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('❌ Polling error:', error);
-        }
-      }, 30000); // Poll every 30 seconds
-    }
-
-    // Cleanup subscription and polling on unmount
+    // Cleanup subscription on unmount
     return () => {
       clearTimeout(timeoutId);
       subscription.unsubscribe();
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
     };
   }, [fetchUserData]); // Remove dependencies that cause frequent restarts
 
@@ -397,8 +334,8 @@ export default function AppLayout({
           </div>
         </div>
 
-        {/* Session Timeout Warning */}
-        <SessionTimeoutWarning />
+        {/* Session Timeout Warning - Temporarily disabled to debug re-render loop */}
+        {/* <SessionTimeoutWarning /> */}
       </UserDataContext.Provider>
     </LoginModalProvider>
   );

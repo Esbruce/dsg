@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { SubscriptionData } from "../../(app)/billing/types";
+import { SubscriptionData } from "../../../lib/types/billing";
 
 interface PaymentMethodProps {
   subscriptionData: SubscriptionData | null;

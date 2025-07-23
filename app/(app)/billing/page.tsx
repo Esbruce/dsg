@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserData } from "../layout";
 
 // Types
-import { SubscriptionData } from "./types";
+import { SubscriptionData } from "../../../lib/types/billing";
 
 // Components
 import BillingHeader from "../../components/billing/BillingHeader";

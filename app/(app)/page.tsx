@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import InputSection from "../components/ui/generator/InputSection";
 import OutputSection from "../components/ui/generator/OutputSection";
@@ -100,7 +100,7 @@ export default function Home() {
     }
   }, [isAuthenticated, isInlineLoginModalOpen]);
 
-  const handleProcess = async () => {
+  const handleProcess = useCallback(async () => {
     if (!medicalNotes.trim()) {
       alert("Please enter medical notes to process");
       return;
@@ -177,7 +177,7 @@ export default function Home() {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [medicalNotes, isAuthenticated, showInlineLoginModal, refreshUserData]);
 
   const handleClear = () => {
     setMedicalNotes("");

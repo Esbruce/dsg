@@ -11,7 +11,7 @@ export default function SuccessMessage() {
         </svg>
       </div>
       <h3 className="text-xl font-semibold text-gray-900 mb-2">Success!</h3>
-      <p className="text-gray-600">You've been successfully authenticated!</p>
+      <p className="text-gray-600">You&apos;ve been successfully authenticated!</p>
       <p className="text-gray-500 text-sm mt-2">Redirecting...</p>
     </div>
   );

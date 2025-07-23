@@ -90,9 +90,9 @@ export function SessionTimeoutWarning({
             Your session will expire in{' '}
             <span className="font-semibold text-red-600">{timeUntilTimeout}</span>
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Click "Stay Logged In" to extend your session, or "Refresh Session" to get a new token.
-          </p>
+                      <p className="text-sm text-gray-500 mt-1">
+              Click &quot;Stay Logged In&quot; to extend your session, or &quot;Refresh Session&quot; to get a new token.
+            </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
