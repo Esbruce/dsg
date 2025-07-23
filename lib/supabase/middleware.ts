@@ -37,16 +37,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Only protect specific routes that require authentication
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/confirm') &&
-    !request.nextUrl.pathname.startsWith('/error')
+    (request.nextUrl.pathname.startsWith('/billing') ||
+     request.nextUrl.pathname.startsWith('/settings'))
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // Redirect to main page where LoginModal will be triggered
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 

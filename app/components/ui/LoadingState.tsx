@@ -5,11 +5,14 @@ export default function LoadingState() {
     <div className="h-full w-full flex items-center justify-center">
       <div className="text-center">
         <div className="mb-8">
-          <div className="inline-block w-16 h-16 border-4 rounded-full animate-spin" 
-               style={{ 
-                 borderColor: 'var(--color-primary-light)',
-                 borderTopColor: 'var(--color-primary)'
-               }}>
+          <div 
+            className="inline-block w-16 h-16 border-4 rounded-full animate-spin" 
+            style={{ 
+              borderColor: 'var(--color-neutral-200)',
+              borderTopColor: 'var(--color-primary)',
+              backgroundColor: 'transparent'
+            }}
+          >
           </div>
         </div>
         
@@ -23,26 +26,34 @@ export default function LoadingState() {
         
         <div className="space-y-3 text-sm" style={{ color: 'var(--color-neutral-500)' }}>
           <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" 
-                 style={{ backgroundColor: 'var(--color-primary)' }}>
+            <div 
+              className="w-2 h-2 rounded-full animate-pulse" 
+              style={{ 
+                backgroundColor: 'var(--color-primary)'
+              }}
+            >
             </div>
             <span>Analyzing medical notes</span>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" 
-                 style={{ 
-                   backgroundColor: 'var(--color-primary)',
-                   animationDelay: '0.2s'
-                 }}>
+            <div 
+              className="w-2 h-2 rounded-full animate-pulse" 
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                animationDelay: '0.2s'
+              }}
+            >
             </div>
             <span>Generating summary</span>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" 
-                 style={{ 
-                   backgroundColor: 'var(--color-primary)',
-                   animationDelay: '0.4s'
-                 }}>
+            <div 
+              className="w-2 h-2 rounded-full animate-pulse" 
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                animationDelay: '0.4s'
+              }}
+            >
             </div>
             <span>Creating discharge plan</span>
           </div>

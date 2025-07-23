@@ -1,9 +1,9 @@
 import React from "react";
 import Image from "next/image";
-import Usage from "./sidebar/Usage";
-import Plan from "./sidebar/Plan";
-import Invite from "./sidebar/Invite";
-import SideNav from "./sidebar/SideNav";
+import Usage from "../ui/widgets/Usage";
+import Plan from "../ui/widgets/Plan";
+import Invite from "../ui/widgets/Invite";
+import SideNav from "./SideNav";
 
 type SidebarProps = {
   usageCount: number;
@@ -13,6 +13,7 @@ type SidebarProps = {
   inviteLinkCopied: boolean;
   isPaid: boolean;
   onGoUnlimited: () => void;
+  isAuthenticated: boolean;
 };
 
 export default function Sidebar({ 
@@ -22,7 +23,8 @@ export default function Sidebar({
   onCopyInviteLink, 
   inviteLinkCopied,
   isPaid,
-  onGoUnlimited
+  onGoUnlimited,
+  isAuthenticated
 }: SidebarProps) {
   return (
     <aside className="w-80 h-full bg-[var(--color-bg-1)] border-r border-[var(--color-neutral-200)] flex flex-col">
@@ -47,6 +49,7 @@ export default function Sidebar({
         <Plan 
           isPaid={isPaid}
           onGoUnlimited={onGoUnlimited}
+          isAuthenticated={isAuthenticated}
         />
 
         {/* <Invite 

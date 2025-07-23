@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import InputSection from "../components/InputSection";
-import OutputSection from "../components/OutputSection";
-import LoadingState from "../components/LoadingState";
-import { createClient } from "../../lib/supabase/client";
+import { useSearchParams } from "next/navigation";
+import InputSection from "../components/ui/generator/InputSection";
+import OutputSection from "../components/ui/generator/OutputSection";
+import LoadingState from "../components/ui/LoadingState";
+
 import "../globals.css";
-import Hero from "../components/Hero";
-import Limit from "../components/Limit";
+import Hero from "../components/ui/Hero";
+import Limit from "../components/overlays/Limit";
 import { useUserData } from "./layout";
+import { useLoginModal, LoginModal } from "../components/auth";
 
 export default function Home() {
   const [medicalNotes, setMedicalNotes] = useState("");
@@ -17,6 +19,18 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmNoPII, setConfirmNoPII] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+
+  // Get URL search params for checkout success handling
+  const searchParams = useSearchParams();
+
+  // Restore medical notes from localStorage on component mount
+  useEffect(() => {
+    const savedNotes = localStorage.getItem('temp_medical_notes');
+    if (savedNotes) {
+      setMedicalNotes(savedNotes);
+      localStorage.removeItem('temp_medical_notes'); // Clean up after restoring
+    }
+  }, []);
   
   // Copy states
   const [summaryCopied, setSummaryCopied] = useState(false);
@@ -25,12 +39,78 @@ export default function Home() {
   // Rate limit state
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   
-  // Get refresh function from context
-  const { refreshUserData } = useUserData();
+  // Get data and functions from context
+  const { refreshUserData, isAuthenticated, isPaid } = useUserData();
+  const { showInlineLoginModal, isInlineLoginModalOpen, hideInlineLoginModal } = useLoginModal();
+
+  // Handle checkout success - refresh user data and show success message
+  useEffect(() => {
+    const checkoutStatus = searchParams.get('checkout');
+    if (checkoutStatus === 'success') {
+      console.log('🎉 Checkout successful, refreshing user data...');
+      
+      // Use enhanced refresh function with built-in polling
+      refreshUserData();
+      
+      // Show success message after a short delay
+      setTimeout(() => {
+        alert('Payment successful! Your subscription is now active.');
+      }, 500);
+      
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      window.history.replaceState({}, '', url.toString());
+      
+    } else if (checkoutStatus === 'cancel') {
+      console.log('❌ Checkout cancelled');
+      
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, refreshUserData]);
+
+  // Handle authentication change - hide inline modal and auto-process
+  useEffect(() => {
+    if (isAuthenticated && isInlineLoginModalOpen) {
+      console.log('🔄 User authenticated, hiding modal and starting auto-process...');
+      hideInlineLoginModal();
+      
+      // Auto-process if user has medical notes (either in state or localStorage)
+      const currentNotes = medicalNotes.trim() || localStorage.getItem('temp_medical_notes');
+      if (currentNotes) {
+        console.log('📝 Found medical notes, starting auto-process...');
+        // Clean up localStorage if it was used
+        localStorage.removeItem('temp_medical_notes');
+        
+        // Ensure notes are in state if they came from localStorage
+        if (!medicalNotes.trim() && currentNotes) {
+          setMedicalNotes(currentNotes);
+        }
+        
+        // Small delay to ensure UI updates and state propagates
+        setTimeout(() => {
+          handleProcess();
+        }, 500);
+      } else {
+        console.log('📝 No medical notes found for auto-processing');
+      }
+    }
+  }, [isAuthenticated, isInlineLoginModalOpen]);
 
   const handleProcess = async () => {
     if (!medicalNotes.trim()) {
       alert("Please enter medical notes to process");
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Save medical notes to localStorage before showing login modal
+      localStorage.setItem('temp_medical_notes', medicalNotes);
+      showInlineLoginModal();
       return;
     }
 
@@ -168,18 +248,28 @@ export default function Home() {
         </section>
       )}
 
-      {/* Input Section - Only visible when not processing and not showing output */}
+      {/* Input Section or Login Modal - Only visible when not processing and not showing output */}
       {!isProcessing && !showOutput && (
         <section className="flex-1">
-          <InputSection
-            medicalNotes={medicalNotes}
-            onNotesChange={(e) => setMedicalNotes(e.target.value)}
-            onClear={handleClear}
-            confirmNoPII={confirmNoPII}
-            onConfirmNoPIIChange={setConfirmNoPII}
-            onProcess={handleProcess}
-            isProcessing={isProcessing}
-          />
+          {isInlineLoginModalOpen ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="bg-white rounded-xl shadow-lg border border-[var(--color-neutral-200)] max-w-md w-full p-8">
+                        <LoginModal
+          onClose={hideInlineLoginModal}
+        />
+              </div>
+            </div>
+          ) : (
+            <InputSection
+              medicalNotes={medicalNotes}
+              onNotesChange={(e) => setMedicalNotes(e.target.value)}
+              onClear={handleClear}
+              confirmNoPII={confirmNoPII}
+              onConfirmNoPIIChange={setConfirmNoPII}
+              onProcess={handleProcess}
+              isProcessing={isProcessing}
+            />
+          )}
         </section>
       )}
 

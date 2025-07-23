@@ -28,10 +28,23 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !userData) {
+      console.error('❌ User not found in database:', error);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    console.log('🔍 User data from database:', {
+      userId: authenticatedUserId,
+      isPaid: userData.is_paid,
+      customerId: userData.stripe_customer_id,
+      subscriptionId: userData.stripe_subscription_id
+    });
+
     if (!userData.is_paid || !userData.stripe_customer_id || !userData.stripe_subscription_id) {
+      console.log('❌ Missing required subscription data:', {
+        isPaid: userData.is_paid,
+        hasCustomerId: !!userData.stripe_customer_id,
+        hasSubscriptionId: !!userData.stripe_subscription_id
+      });
       return NextResponse.json({ 
         hasSubscription: false,
         message: 'No active subscription found'
@@ -39,12 +52,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch subscription details from Stripe
+    console.log('🔍 Fetching subscription from Stripe:', userData.stripe_subscription_id);
     const subscription = await stripe.subscriptions.retrieve(userData.stripe_subscription_id, {
       expand: ['default_payment_method', 'items.data.price']
     });
+    console.log('✅ Subscription retrieved successfully:', subscription.id);
 
     // Fetch customer details for payment method info
+    console.log('🔍 Fetching customer from Stripe:', userData.stripe_customer_id);
     const customer = await stripe.customers.retrieve(userData.stripe_customer_id) as Stripe.Customer;
+    console.log('✅ Customer retrieved successfully:', customer.id);
 
     // Extract payment method details
     let paymentMethod = null;
@@ -78,8 +95,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(subscriptionData);
   } catch (err: any) {
     console.error('Subscription fetch error:', err);
+    
+    // Log more details about the error
+    if (err.type) {
+      console.error('Stripe error type:', err.type);
+    }
+    if (err.code) {
+      console.error('Stripe error code:', err.code);
+    }
+    if (err.param) {
+      console.error('Stripe error param:', err.param);
+    }
+    
     return NextResponse.json({ 
-      error: err.message || 'Failed to fetch subscription details' 
+      error: err.message || 'Failed to fetch subscription details',
+      stripeError: {
+        type: err.type,
+        code: err.code,
+        param: err.param
+      }
     }, { status: 500 });
   }
 } 

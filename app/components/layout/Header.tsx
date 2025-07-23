@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { logout } from "@/app/login/actions";
 import { useRouter } from "next/navigation";
-import { useUserData } from "../(app)/layout";
+import { useUserData } from "@/app/(app)/layout";
+import { useLoginModal } from "../auth/LoginModal";
 
 export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -11,12 +12,16 @@ export default function Header() {
   const router = useRouter();
   
   // Use context data instead of fetching independently
-  const { userEmail, isPaid, isLoading } = useUserData();
+  const { userEmail, isPaid, isLoading, isAuthenticated, refreshUserData } = useUserData();
+  const { showInlineLoginModal } = useLoginModal();
   
   // Debug logging
   console.log("🔍 Header component - isLoading:", isLoading);
   console.log("🔍 Header component - userEmail:", userEmail);
   console.log("🔍 Header component - isPaid:", isPaid);
+  console.log("🔍 Header component - isAuthenticated:", isAuthenticated);
+
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,6 +40,10 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await logout();
+      // Close dropdown
+      setIsDropdownOpen(false);
+      // Refresh user data to update authentication state
+      await refreshUserData();
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -56,11 +65,13 @@ export default function Header() {
           </button>
 
           <button 
-            onClick={() => router.push('/billing')}
+            onClick={() => isAuthenticated ? router.push('/billing') : showInlineLoginModal()}
             className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium"
           >
             Billing
           </button>
+          
+
           
           {/* User Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -91,7 +102,7 @@ export default function Header() {
                   <div className="px-4 py-3 text-center text-gray-500">
                     Loading...
                   </div>
-                ) : (
+                ) : isAuthenticated ? (
                   <>
                     {/* User Email */}
                     <div className="px-4 py-3 border-b border-gray-100">
@@ -119,6 +130,22 @@ export default function Header() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
                       Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Sign In Button for unauthenticated users */}
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        showInlineLoginModal();
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-[var(--color-primary)] hover:bg-gray-100 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                      </svg>
+                      Sign In
                     </button>
                   </>
                 )}

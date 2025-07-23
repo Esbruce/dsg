@@ -5,7 +5,7 @@ export default function Hero() {
     <div className="text-center py-6">
       <h1 className="text-4xl font-bold mb-4 text-[var(--color-neutral-900)]">
         Medical Notes to{" "} <br /> 
-        <span className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">
+        <span className="text-[var(--color-primary)]">
           Discharge Summary
         </span>{" "}
         in seconds

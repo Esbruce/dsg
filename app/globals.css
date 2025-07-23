@@ -135,6 +135,34 @@ button:disabled {
   animation: fadein 0.7s cubic-bezier(.4,0,.2,1);
 }
 
+/* Spin animation for loading circles */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading dots */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Rotating Gradient Border Effect */
 @keyframes rotate-gradient {
   0% {
@@ -185,6 +213,14 @@ button:disabled {
 /* Pause animation if user prefers reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .rotating-gradient-border::before {
+    animation: none;
+  }
+  
+  .animate-spin {
+    animation: none;
+  }
+  
+  .animate-pulse {
     animation: none;
   }
 }
