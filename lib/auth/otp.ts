@@ -79,29 +79,19 @@ export class OTPService {
    * Verify OTP code
    */
   async verifyOTP(phoneNumber: string, otp: string): Promise<OTPResult> {
-    console.log('🔍 OTP Service: Starting verification for', phoneNumber)
-    
     const phoneValidation = this.validatePhoneNumber(phoneNumber)
     if (!phoneValidation.valid) {
-      console.log('❌ OTP Service: Phone validation failed:', phoneValidation.error)
       return { success: false, error: phoneValidation.error }
     }
 
     const otpValidation = this.validateOTP(otp)
     if (!otpValidation.valid) {
-      console.log('❌ OTP Service: OTP validation failed:', otpValidation.error)
       return { success: false, error: otpValidation.error }
     }
 
     try {
       const supabase = await createClient()
       const formattedPhone = this.formatPhoneNumber(phoneNumber)
-      
-      console.log('🔍 OTP Service: Calling Supabase verifyOtp with:', {
-        phone: formattedPhone,
-        token: otp ? '***' : 'missing',
-        type: 'sms'
-      })
       
       // For phone OTP verification, we need to use the correct flow
       const {
@@ -114,19 +104,15 @@ export class OTPService {
       })
 
       if (error) {
-        console.log('❌ OTP Service: Supabase error:', error.message)
         return { success: false, error: error.message }
       }
 
       if (session) {
-        console.log('✅ OTP Service: Verification successful, session created')
         return { success: true, session }
       }
 
-      console.log('❌ OTP Service: No session returned from Supabase')
       return { success: false, error: "Verification failed" }
     } catch (error) {
-      console.log('❌ OTP Service: Unexpected error:', error)
       return { 
         success: false, 
         error: "An unexpected error occurred. Please try again." 

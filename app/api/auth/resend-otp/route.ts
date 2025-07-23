@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check rate limit
-    const rateLimitResult = resendRateLimiter.check(req, phoneNumber)
+    const rateLimitResult = await resendRateLimiter.check(req, phoneNumber)
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { error: rateLimitResult.error || 'Rate limit exceeded' },

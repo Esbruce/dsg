@@ -35,7 +35,16 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError
   } = await supabase.auth.getUser()
+
+  // Check for session timeout or authentication errors
+  if (authError) {
+    console.error('Auth error in middleware:', authError)
+    // Clear invalid session cookies
+    supabaseResponse.cookies.delete('sb-access-token')
+    supabaseResponse.cookies.delete('sb-refresh-token')
+  }
 
   // Only protect specific routes that require authentication
   if (
@@ -47,6 +56,24 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
+  }
+
+  // Check if user session is expired
+  if (user) {
+    const session = await supabase.auth.getSession()
+    if (session.data.session) {
+      const expiresAt = session.data.session.expires_at
+      const now = Math.floor(Date.now() / 1000)
+      
+      // If session expires in less than 5 minutes, refresh it
+      if (expiresAt && (expiresAt - now) < 300) {
+        try {
+          await supabase.auth.refreshSession()
+        } catch (error) {
+          console.error('Session refresh error in middleware:', error)
+        }
+      }
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

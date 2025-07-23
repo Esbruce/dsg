@@ -65,30 +65,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     // Component is ready
   }, []);
 
-  // Debug function to test verification
-  const debugVerification = async () => {
-    console.log('🔍 Debug: Testing verification with code:', otpState.otp);
-    console.log('🔍 Debug: Phone number:', phoneNumber);
-    
-    // Test with a simple verification
-    const { createClient } = await import('@/lib/supabase/client');
-    const supabase = createClient();
-    
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: phoneNumber,
-      token: otpState.otp,
-      type: 'sms',
-    });
-    
-    console.log('🔍 Debug: Verification result:', { data, error });
-    
-    if (error) {
-      console.log('❌ Debug: Error details:', error);
-      if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
-        alert('OTP code expired or invalid. Please request a new code.');
-      }
-    }
-  };
+  // Debug function removed for security
   
   // Use the new OTP service and hooks
   const { state: otpState, updateState: updateOTPState, resetOTPState } = useOTPState();
@@ -124,23 +101,12 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const handleOTPSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    console.log('🔍 LoginModal: Starting OTP verification for', phoneNumber)
-    console.log('🔍 LoginModal: OTP value:', otpState.otp ? '***' : 'missing')
-    
     updateOTPState({ otpProcessing: true, otpError: "" });
 
     try {
       const result = await otpClientService.verifyOTP(phoneNumber, otpState.otp);
-      
-      console.log('🔍 LoginModal: OTP verification result:', { 
-        success: result.success, 
-        error: result.error,
-        hasSession: !!result.session 
-      })
 
       if (result.success) {
-        console.log('✅ LoginModal: OTP verification successful')
-        
         // Session is already set by the client-side Supabase client
         // No need to manually set it
         
@@ -148,7 +114,6 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         
         // Trigger auth success callback to refresh user data
         if (onAuthSuccess) {
-          console.log('🔍 LoginModal: Triggering auth success callback')
           onAuthSuccess();
         }
         
@@ -158,20 +123,17 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         }, 1000);
       } else if (result.error?.includes('Invalid OTP') || result.error?.includes('Invalid token')) {
         // Handle specific OTP errors
-        console.log('❌ LoginModal: Invalid OTP code')
         updateOTPState({ 
           otpError: "Invalid verification code. Please check and try again.",
           otpProcessing: false 
         });
       } else {
-        console.log('❌ LoginModal: OTP verification failed:', result.error)
         updateOTPState({ 
           otpError: result.error || "Verification failed",
           otpProcessing: false 
         });
       }
     } catch (error) {
-      console.log('❌ LoginModal: OTP verification unexpected error:', error)
       updateOTPState({ 
         otpError: "An unexpected error occurred. Please try again.",
         otpProcessing: false 
@@ -199,7 +161,6 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   };
 
   const handleClearStuckState = () => {
-    console.log('🔧 Clearing stuck verification state');
     updateOTPState({ 
       otpProcessing: false, 
       otpError: "Verification was cancelled. Please try again with a fresh code." 
@@ -243,27 +204,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
             resendError={otpState.otpResendError}
           />
           
-          {/* Debug and cancel buttons - remove after testing */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 text-center space-y-2">
-              <button
-                type="button"
-                onClick={debugVerification}
-                className="text-sm text-blue-600 hover:text-blue-800 underline block"
-              >
-                Debug: Test Verification
-              </button>
-              {otpState.otpProcessing && (
-                <button
-                  type="button"
-                  onClick={handleClearStuckState}
-                  className="text-sm text-red-600 hover:text-red-800 underline block"
-                >
-                  Cancel Verification (if stuck)
-                </button>
-              )}
-            </div>
-          )}
+          {/* Debug buttons removed for security */}
         </>
       )}
       

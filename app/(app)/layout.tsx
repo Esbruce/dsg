@@ -6,6 +6,7 @@ import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
 import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
 import { LoginModalProvider } from "../components/auth";
+import { SessionTimeoutWarning } from "../components/auth/SessionTimeoutWarning";
 
 // Enhanced context interface
 interface UserDataContextType {
@@ -59,10 +60,8 @@ export default function AppLayout({
 
   // Enhanced fetch user data function with performance optimizations
   const fetchUserData = useCallback(async () => {
-    console.log('🔄 Starting fetchUserData...');
     try {
       const supabase = createClient();
-      console.log('✅ Supabase client created');
       
       // Get user and status in parallel for better performance
       const [authResult, statusRes] = await Promise.allSettled([
@@ -74,11 +73,8 @@ export default function AppLayout({
         })
       ]);
 
-      console.log('✅ Parallel requests completed');
-
       // Handle authentication result
       if (authResult.status === 'rejected') {
-        console.error('❌ Auth failed:', authResult.reason);
         setIsAuthenticated(false);
         setUserEmail(null);
         setIsLoading(false);
@@ -86,17 +82,13 @@ export default function AppLayout({
       }
 
       const { data: { user } } = authResult.value;
-      console.log('✅ Auth getUser completed, user:', user?.id);
       
       if (!user) {
-        console.log('❌ No user found, setting unauthenticated state');
         setIsAuthenticated(false);
         setUserEmail(null);
         setIsLoading(false);
         return;
       }
-
-      console.log('✅ User authenticated');
       setIsAuthenticated(true);
       setUserEmail(user.email || null);
       setUserPhone(user.phone || null);
@@ -108,26 +100,17 @@ export default function AppLayout({
       // Handle status result
       if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
         const { user: userStatus } = await statusRes.value.json();
-        console.log('✅ User status data:', userStatus);
         if (userStatus) {
-          console.log('✅ Setting user data:', {
-            usageCount: userStatus.daily_usage_count || 0,
-            isPaid: userStatus.is_paid || false
-          });
           setUsageCount(userStatus.daily_usage_count || 0);
           setIsPaid(userStatus.is_paid || false);
         } else {
-          console.log('❌ No user status data returned');
           setUsageCount(0);
           setIsPaid(false);
         }
       } else {
-        console.log('❌ Status API failed:', statusRes.status, statusRes.status === 'rejected' ? statusRes.reason : 'Unknown error');
         
         // Check if the failure is due to user not existing in the database
         if (statusRes.status === 'fulfilled' && statusRes.value.status === 404) {
-          console.log('🔧 User not found in database, checking if user record exists...');
-          
           // Check if user record exists using API endpoint
           try {
             const checkUserRes = await fetch("/api/user/check-exists", {
@@ -141,7 +124,6 @@ export default function AppLayout({
               
               if (!exists) {
                 // User doesn't exist in users table, create the record
-                console.log('🔧 User record does not exist, creating...');
                 try {
                   const createUserRes = await fetch("/api/supabase/create-user", {
                     method: "POST",
@@ -150,7 +132,6 @@ export default function AppLayout({
                   });
                   
                   if (createUserRes.ok) {
-                    console.log('✅ User record created successfully');
                     // Retry fetching user status
                     const retryStatusRes = await fetch("/api/user/status", {
                       method: "POST",
@@ -160,34 +141,28 @@ export default function AppLayout({
                     
                     if (retryStatusRes.ok) {
                       const { user: userStatus } = await retryStatusRes.json();
-                      console.log('✅ Retry user status data:', userStatus);
                       if (userStatus) {
                         setUsageCount(userStatus.daily_usage_count || 0);
                         setIsPaid(userStatus.is_paid || false);
                       }
                     }
                   } else {
-                    console.log('❌ Failed to create user record');
                     setUsageCount(0);
                     setIsPaid(false);
                   }
                 } catch (createError) {
-                  console.log('❌ Error creating user record:', createError);
                   setUsageCount(0);
                   setIsPaid(false);
                 }
               } else {
-                console.log('✅ User record exists but status API failed for other reasons');
                 setUsageCount(0);
                 setIsPaid(false);
               }
             } else {
-              console.log('❌ Failed to check user existence');
               setUsageCount(0);
               setIsPaid(false);
             }
           } catch (checkError) {
-            console.log('❌ Error checking user record:', checkError);
             setUsageCount(0);
             setIsPaid(false);
           }
@@ -197,11 +172,9 @@ export default function AppLayout({
         }
       }
     } catch (error) {
-      console.error('❌ Error in fetchUserData:', error);
       setUsageCount(0);
       setIsPaid(false);
     } finally {
-      console.log('✅ Setting isLoading to false');
       setIsLoading(false);
     }
   }, []); // Empty dependency array since this function doesn't depend on any state
@@ -226,19 +199,13 @@ export default function AppLayout({
             const { user: userStatus } = await statusRes.json();
             if (userStatus) {
               if (userStatus.is_paid !== isPaid || userStatus.daily_usage_count !== usageCount) {
-                console.log('🔄 Payment status updated on immediate check:', {
-                  oldIsPaid: isPaid,
-                  newIsPaid: userStatus.is_paid,
-                  oldUsageCount: usageCount,
-                  newUsageCount: userStatus.daily_usage_count
-                });
                 setUsageCount(userStatus.daily_usage_count || 0);
                 setIsPaid(userStatus.is_paid || false);
               }
             }
           }
         } catch (error) {
-          console.error('❌ Immediate payment status check failed:', error);
+          // Silent fail for immediate check
         }
       }, 1000); // Check again after 1 second
     }
@@ -249,18 +216,6 @@ export default function AppLayout({
   const displayIsPaid = isAuthenticated ? isPaid : false;
   const displayUserEmail = isAuthenticated ? userIdentifier : null; // Use identifier (email or phone)
   
-  // Debug logging
-  console.log('🔍 Layout state:', {
-    isAuthenticated,
-    userEmail,
-    usageCount,
-    isPaid,
-    isLoading,
-    displayUserEmail,
-    displayUsageCount,
-    displayIsPaid
-  });
-
   // Stable context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => {
     const value = {
@@ -274,17 +229,13 @@ export default function AppLayout({
       refreshUserData: refreshUserDataWithPolling,
       refreshAll: refreshUserDataWithPolling, // Use enhanced version
     };
-    console.log('🔄 Context value updated:', value);
     return value;
   }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, refreshUserDataWithPolling]);
 
   // Fetch user data on component mount and listen for auth changes
   useEffect(() => {
-    console.log('🔄 Layout useEffect triggered');
-    
     // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.log('⚠️ Loading timeout reached, forcing isLoading to false');
       setIsLoading(false);
     }, 5000); // 5 second timeout (reduced due to parallel requests)
     
@@ -295,10 +246,7 @@ export default function AppLayout({
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.id);
-      
       if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out, updating state...');
         setIsAuthenticated(false);
         setUserEmail(null);
         setUserPhone(null);
@@ -307,9 +255,6 @@ export default function AppLayout({
         setIsPaid(false);
         setIsLoading(false);
       } else if (event === 'SIGNED_IN' && session) {
-        console.log('👋 User signed in, fetching user data...');
-        console.log('👋 Session user:', session.user);
-        
         // Set authentication state immediately
         setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
@@ -324,7 +269,6 @@ export default function AppLayout({
           await fetchUserData();
         }, 100);
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        console.log('🔄 Token refreshed, ensuring user data is current...');
         // Refresh user data when token is refreshed
         await fetchUserData();
       }
@@ -452,6 +396,9 @@ export default function AppLayout({
             </main>
           </div>
         </div>
+
+        {/* Session Timeout Warning */}
+        <SessionTimeoutWarning />
       </UserDataContext.Provider>
     </LoginModalProvider>
   );

@@ -32,19 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    console.log('🔍 User data from database:', {
-      userId: authenticatedUserId,
-      isPaid: userData.is_paid,
-      customerId: userData.stripe_customer_id,
-      subscriptionId: userData.stripe_subscription_id
-    });
-
     if (!userData.is_paid || !userData.stripe_customer_id || !userData.stripe_subscription_id) {
-      console.log('❌ Missing required subscription data:', {
-        isPaid: userData.is_paid,
-        hasCustomerId: !!userData.stripe_customer_id,
-        hasSubscriptionId: !!userData.stripe_subscription_id
-      });
       return NextResponse.json({ 
         hasSubscription: false,
         message: 'No active subscription found'
@@ -52,16 +40,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch subscription details from Stripe
-    console.log('🔍 Fetching subscription from Stripe:', userData.stripe_subscription_id);
     const subscription = await stripe.subscriptions.retrieve(userData.stripe_subscription_id, {
       expand: ['default_payment_method', 'items.data.price']
     });
-    console.log('✅ Subscription retrieved successfully:', subscription.id);
 
     // Fetch customer details for payment method info
-    console.log('🔍 Fetching customer from Stripe:', userData.stripe_customer_id);
     const customer = await stripe.customers.retrieve(userData.stripe_customer_id) as Stripe.Customer;
-    console.log('✅ Customer retrieved successfully:', customer.id);
 
     // Extract payment method details
     let paymentMethod = null;

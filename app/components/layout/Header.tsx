@@ -13,13 +13,10 @@ export default function Header() {
   
   // Use context data instead of fetching independently
   const { userEmail, isPaid, isLoading, isAuthenticated, refreshUserData } = useUserData();
-  const { showInlineLoginModal } = useLoginModal();
+  const { showInlineLoginModal, hideInlineLoginModal } = useLoginModal();
   
   // Debug logging
-  console.log("🔍 Header component - isLoading:", isLoading);
-  console.log("🔍 Header component - userEmail:", userEmail);
-  console.log("🔍 Header component - isPaid:", isPaid);
-  console.log("🔍 Header component - isAuthenticated:", isAuthenticated);
+  // Debug logging removed for security
 
 
 
@@ -58,7 +55,10 @@ export default function Header() {
       <div className=" flex items-center justify-end gap-6">
         <nav className="flex items-center gap-10">
         <button 
-            onClick={() => router.push('/')}
+            onClick={() => {
+              hideInlineLoginModal();
+              router.push('/');
+            }}
             className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium"
           >
             Home
