@@ -5,6 +5,7 @@ import { logout } from "@/app/login/actions";
 import { useRouter } from "next/navigation";
 import { useUserData } from "@/app/(app)/layout";
 import { useLoginModal } from "../auth/LoginModal";
+import { formatUKPhoneForDisplay, normalizeUKPhoneNumber } from "@/lib/utils/phone";
 
 export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -12,8 +13,29 @@ export default function Header() {
   const router = useRouter();
   
   // Use context data instead of fetching independently
-  const { userEmail, isPaid, isLoading, isAuthenticated, refreshUserData } = useUserData();
+  const { userIdentifier, isPaid, isLoading, isAuthenticated, refreshUserData } = useUserData();
   const { showInlineLoginModal, hideInlineLoginModal } = useLoginModal();
+  
+  // Format the user identifier for display (email or phone)
+  const displayUserIdentifier = React.useMemo(() => {
+    if (!userIdentifier) return null;
+    
+    // Check if it's a phone number (contains only digits and possibly +)
+    const isPhoneNumber = /^\+?[\d\s]+$/.test(userIdentifier);
+    
+    if (isPhoneNumber) {
+      // Format phone number for display
+      const normalizedPhone = normalizeUKPhoneNumber(userIdentifier);
+      if (normalizedPhone) {
+        return formatUKPhoneForDisplay(normalizedPhone);
+      }
+      // Fallback to original if normalization fails
+      return userIdentifier;
+    }
+    
+    // Return email as-is
+    return userIdentifier;
+  }, [userIdentifier]);
   
   // Debug logging
   // Debug logging removed for security
@@ -107,7 +129,7 @@ export default function Header() {
                     {/* User Email */}
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {userEmail}
+                        {displayUserIdentifier}
                       </p>
                     </div>
 

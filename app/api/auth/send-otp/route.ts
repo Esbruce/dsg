@@ -4,7 +4,8 @@ import { otpRateLimiter } from '@/lib/auth/rate-limiter'
 
 export async function POST(req: NextRequest) {
   try {
-    const { phoneNumber } = await req.json()
+    const { phoneNumber, captchaToken } = await req.json()
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
 
     // Validate required fields
     if (!phoneNumber) {
@@ -23,8 +24,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Send OTP
-    const result = await otpService.sendOTP(phoneNumber)
+    // Send OTP with CAPTCHA verification
+    const result = await otpService.sendOTP({
+      phoneNumber,
+      captchaToken,
+      ipAddress
+    })
     
     if (!result.success) {
       return NextResponse.json(

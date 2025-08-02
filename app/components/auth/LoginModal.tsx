@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from 'react'
 import PhoneInput from './PhoneInput';
 import CodeInput from './CodeInput';
 import SuccessMessage from './SuccessMessage';
+import TurnstileCaptcha from './TurnstileCaptcha';
 import { otpClientService, useOTPState, useOTPTimers } from '@/lib/auth/otp-client';
 
 // Context for managing modal state
@@ -59,6 +60,9 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [captchaError, setCaptchaError] = useState<string>("");
+  const [showCaptcha, setShowCaptcha] = useState(false);
   
   // Component mounted
   React.useEffect(() => {
@@ -80,22 +84,49 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     updateOTPState({ otp: e.target.value, otpError: "" });
   };
 
-  const handlePhoneNumberSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
+  const handleCaptchaVerify = (token: string) => {
+    console.log('✅ CAPTCHA verified, token received')
+    setCaptchaToken(token);
+    setCaptchaError("");
+    // Automatically send OTP after CAPTCHA verification
+    sendOTPWithCaptcha(token);
+  };
+
+  const handleCaptchaError = (error: string) => {
+    console.log('❌ CAPTCHA error:', error)
+    setCaptchaError(error);
+    setCaptchaToken("");
+    setIsProcessing(false);
+  };
+
+  const sendOTPWithCaptcha = async (token: string) => {
     setIsProcessing(true);
     setError("");
 
-    const result = await otpClientService.sendOTP(phoneNumber);
+    try {
+      const result = await otpClientService.sendOTP(phoneNumber, token);
 
-    if (result.success) {
-      updateOTPState({ otpSent: true });
-      startTimers();
-    } else {
-      setError(result.error || "Failed to send OTP");
+      if (result.success) {
+        updateOTPState({ otpSent: true });
+        startTimers();
+        setShowCaptcha(false);
+      } else {
+        setError(result.error || "Failed to send OTP");
+      }
+    } catch (error) {
+      setError("An unexpected error occurred");
     }
 
     setIsProcessing(false);
+  };
+
+  const handlePhoneNumberSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // For minimal implementation, always show CAPTCHA
+    // In production, you'd check risk factors here
+    setShowCaptcha(true);
+    setIsProcessing(true);
   };
 
   const handleOTPSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -181,13 +212,44 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
       {otpState.isOTPVerified ? (
         <SuccessMessage />
       ) : !otpState.otpSent ? (
-        <PhoneInput
-          phoneNumber={phoneNumber}
-          onPhoneNumberChange={handlePhoneNumberChange}
-          onSubmit={handlePhoneNumberSubmit}
-          isProcessing={isProcessing}
-          error={error}
-        />
+        <>
+          {showCaptcha ? (
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">
+                  Please complete the security check below to send your verification code
+                </p>
+                <TurnstileCaptcha
+                  key={`turnstile-captcha-${showCaptcha ? 'active' : 'inactive'}`}
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                  onVerify={handleCaptchaVerify}
+                  onError={handleCaptchaError}
+                  className="flex justify-center"
+                />
+                {captchaError && (
+                  <p className="mt-2 text-sm text-red-600">{captchaError}</p>
+                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  Click the checkbox above to verify you're human
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCaptcha(false)}
+                className="w-full text-gray-500 hover:text-gray-700 text-sm underline"
+              >
+                Back to phone number
+              </button>
+            </div>
+          ) : (
+            <PhoneInput
+              phoneNumber={phoneNumber}
+              onPhoneNumberChange={handlePhoneNumberChange}
+              onSubmit={handlePhoneNumberSubmit}
+              isProcessing={isProcessing}
+              error={error}
+            />
+          )}
+        </>
       ) : (
         <>
           <CodeInput

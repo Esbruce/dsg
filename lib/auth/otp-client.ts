@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { validateUKPhoneNumber, normalizeUKPhoneNumber } from '@/lib/utils/phone'
 
 export interface OTPState {
   otp: string
@@ -111,35 +112,87 @@ export function useOTPTimers() {
  */
 export class OTPClientService {
   /**
-   * Send OTP via API route
+   * Check if a user exists by normalized phone number
    */
-  async sendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+  private async checkUserExists(normalizedPhone: string): Promise<boolean> {
     try {
-      // Import the client-side Supabase client
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       
-      // Format phone number - ensure it has country code
-      let formattedPhone = phoneNumber.replace(/[^\d+]/g, '')
-      if (!formattedPhone.startsWith('+')) {
-        // Assume US number if no country code
-        formattedPhone = '+1' + formattedPhone
-      }
-      
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+      // Try to sign in with OTP without creating a user
+      // If this succeeds, the user exists
+      // If it fails with "Signups not allowed" or "User not found", the user doesn't exist
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: normalizedPhone,
         options: {
-          shouldCreateUser: true, // Create user if doesn't exist
+          shouldCreateUser: false, // Don't create user if they don't exist
         }
       })
 
       if (error) {
-        return { success: false, error: error.message }
+        // Check if the error indicates user doesn't exist
+        if (error.message.includes('Signups not allowed') || 
+            error.message.includes('User not found') ||
+            error.message.includes('Invalid login credentials')) {
+          console.log('🔍 User does not exist:', normalizedPhone)
+          return false
+        }
+        // For other errors, log and assume user doesn't exist
+        console.log('🔍 User existence check error:', error.message)
+        return false
       }
+
+      // If no error, user exists
+      console.log('🔍 User exists:', normalizedPhone)
+      return true
+    } catch (error) {
+      console.log('🔍 User existence check failed:', error)
+      return false
+    }
+  }
+
+  /**
+   * Send OTP via API route
+   */
+  async sendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+    try {
+      // Validate phone number first
+      const validation = validateUKPhoneNumber(phoneNumber)
+      if (!validation.valid) {
+        return { success: false, error: validation.error }
+      }
+
+      // Normalize phone number
+      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+      if (!normalizedPhone) {
+        return { success: false, error: "Invalid phone number format" }
+      }
+
+      // Call API route with CAPTCHA token
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: normalizedPhone,
+          captchaToken
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to send OTP'
+        }
+      }
+
       return { 
         success: true,
-        remaining: 0,
-        resetTime: 0
+        remaining: result.remaining || 0,
+        resetTime: result.resetTime || 0
       }
     } catch (error) {
       console.log('❌ OTP Client: Send OTP unexpected error:', error)
@@ -156,16 +209,23 @@ export class OTPClientService {
   async verifyOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; error?: string; session?: any; remaining?: number; resetTime?: number }> {
     return new Promise(async (resolve) => {
       try {
+        // Validate phone number first
+        const phoneValidation = validateUKPhoneNumber(phoneNumber)
+        if (!phoneValidation.valid) {
+          resolve({ success: false, error: phoneValidation.error })
+          return
+        }
+
+        // Normalize phone number
+        const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+        if (!normalizedPhone) {
+          resolve({ success: false, error: "Invalid phone number format" })
+          return
+        }
+
         // Import the client-side Supabase client
         const { createClient } = await import('@/lib/supabase/client')
         const supabase = createClient()
-        
-        // Format phone number - ensure it has country code
-        let formattedPhone = phoneNumber.replace(/[^\d+]/g, '')
-        if (!formattedPhone.startsWith('+')) {
-          // Assume US number if no country code
-          formattedPhone = '+1' + formattedPhone
-        }
         
         // Set up auth state listener to detect successful verification
         let authStateResolved = false;
@@ -187,7 +247,7 @@ export class OTPClientService {
           data: { session },
           error,
         } = await supabase.auth.verifyOtp({
-          phone: formattedPhone,
+          phone: normalizedPhone,
           token: otp,
           type: 'sms',
         });
@@ -243,27 +303,66 @@ export class OTPClientService {
    */
   async resendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
     try {
+      // Validate phone number first
+      const validation = validateUKPhoneNumber(phoneNumber)
+      if (!validation.valid) {
+        return { success: false, error: validation.error }
+      }
+
+      // Normalize phone number
+      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+      if (!normalizedPhone) {
+        return { success: false, error: "Invalid phone number format" }
+      }
+
       // Import the client-side Supabase client
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       
-      // Format phone number - ensure it has country code
-      let formattedPhone = phoneNumber.replace(/[^\d+]/g, '')
-      if (!formattedPhone.startsWith('+')) {
-        // Assume US number if no country code
-        formattedPhone = '+1' + formattedPhone
-      }
-      
+      // Try to resend OTP for existing user first
+      console.log('📱 Attempting to resend OTP for existing user:', normalizedPhone)
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        phone: normalizedPhone,
+        options: {
+          shouldCreateUser: false, // Don't create user if they don't exist
+        }
       })
 
       if (error) {
-        return { success: false, error: error.message }
+        // Check if the error indicates user doesn't exist
+        if (error.message.includes('Signups not allowed') || 
+            error.message.includes('User not found') ||
+            error.message.includes('Invalid login credentials')) {
+          
+          console.log('📱 User not found during resend, creating new account with OTP')
+          // User doesn't exist, create new user with OTP
+          const { error: signUpError } = await supabase.auth.signInWithOtp({
+            phone: normalizedPhone,
+            options: {
+              shouldCreateUser: true, // Create user for new signups
+            }
+          })
+
+          if (signUpError) {
+            return { success: false, error: signUpError.message }
+          }
+
+          return { 
+            success: true,
+            remaining: 0,
+            resetTime: 0
+          }
+        } else {
+          // Other error occurred
+          return { success: false, error: error.message }
+        }
       }
+
+      // If no error, OTP was resent successfully to existing user
+      console.log('📱 OTP resent successfully to existing user')
       return { 
         success: true,
-        remaining: 0, // Not applicable for client-side
+        remaining: 0,
         resetTime: 0
       }
     } catch (error) {

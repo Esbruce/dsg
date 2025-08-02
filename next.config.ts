@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://api.stripe.com https://*.supabase.co; font-src 'self' data:; frame-src https://js.stripe.com;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://api.stripe.com https://*.supabase.co; font-src 'self' data:; frame-src https://js.stripe.com https://challenges.cloudflare.com;"
           },
           {
             key: 'X-Content-Type-Options',

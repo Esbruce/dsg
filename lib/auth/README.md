@@ -18,7 +18,6 @@ lib/auth/
 ├── otp.ts              # Server-side OTP service (no React dependencies)
 ├── otp-client.ts       # Client-side hooks and API client
 ├── rate-limiter.ts     # Rate limiting utilities
-├── captcha.ts          # CAPTCHA verification utilities
 └── README.md           # This file
 
 app/api/auth/

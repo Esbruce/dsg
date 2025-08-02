@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { validateUKPhoneNumber, normalizeUKPhoneNumber } from '@/lib/utils/phone'
+import { captchaService } from './captcha'
 
 export interface OTPResult {
   success: boolean
@@ -6,31 +8,13 @@ export interface OTPResult {
   session?: any
 }
 
+export interface SendOTPRequest {
+  phoneNumber: string
+  captchaToken?: string
+  ipAddress?: string
+}
+
 export class OTPService {
-  /**
-   * Format phone number to international format
-   */
-  private formatPhoneNumber(phone: string): string {
-    return phone.replace(/[^\d+]/g, '')
-  }
-
-  /**
-   * Validate phone number format
-   */
-  private validatePhoneNumber(phone: string): { valid: boolean; error?: string } {
-    const phoneRegex = /^\+[1-9]\d{1,14}$/
-    const cleaned = phone.replace(/[^\d+]/g, '')
-    
-    if (!phoneRegex.test(cleaned)) {
-      return {
-        valid: false,
-        error: "Please enter a valid phone number with country code (e.g., +1234567890)"
-      }
-    }
-    
-    return { valid: true }
-  }
-
   /**
    * Validate OTP format
    */
@@ -46,26 +30,77 @@ export class OTPService {
   }
 
   /**
-   * Send OTP to phone number
+   * Send OTP to phone number with optional CAPTCHA verification
    */
-  async sendOTP(phoneNumber: string): Promise<OTPResult> {
-    const validation = this.validatePhoneNumber(phoneNumber)
+  async sendOTP(request: SendOTPRequest): Promise<OTPResult> {
+    const { phoneNumber, captchaToken, ipAddress } = request
+    
+    const validation = validateUKPhoneNumber(phoneNumber)
     if (!validation.valid) {
       return { success: false, error: validation.error }
     }
 
     try {
       const supabase = await createClient()
-      const formattedPhone = this.formatPhoneNumber(phoneNumber)
+      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
       
+      if (!normalizedPhone) {
+        return { success: false, error: "Invalid phone number format" }
+      }
+
+      // Verify CAPTCHA if token is provided
+      if (captchaToken) {
+        console.log('🔒 Verifying CAPTCHA token...')
+        const captchaResult = await captchaService.verifyToken(captchaToken, ipAddress)
+        
+        if (!captchaResult.success) {
+          console.log('❌ CAPTCHA verification failed:', captchaResult.error)
+          return { 
+            success: false, 
+            error: captchaResult.error || 'CAPTCHA verification failed' 
+          }
+        }
+        
+        console.log('✅ CAPTCHA verification successful, score:', captchaResult.score)
+      }
+      
+      // Try to send OTP for existing user first
+      console.log('📱 Server: Attempting to send OTP for existing user:', normalizedPhone)
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        phone: normalizedPhone,
+        options: {
+          shouldCreateUser: false, // Don't create user if they don't exist
+        }
       })
 
       if (error) {
-        return { success: false, error: error.message }
+        // Check if the error indicates user doesn't exist
+        if (error.message.includes('Signups not allowed') || 
+            error.message.includes('User not found') ||
+            error.message.includes('Invalid login credentials')) {
+          
+          console.log('📱 Server: User not found, creating new account with OTP')
+          // User doesn't exist, create new user with OTP
+          const { error: signUpError } = await supabase.auth.signInWithOtp({
+            phone: normalizedPhone,
+            options: {
+              shouldCreateUser: true, // Create user for new signups
+            }
+          })
+
+          if (signUpError) {
+            return { success: false, error: signUpError.message }
+          }
+
+          return { success: true }
+        } else {
+          // Other error occurred
+          return { success: false, error: error.message }
+        }
       }
 
+      // If no error, OTP was sent successfully to existing user
+      console.log('📱 Server: OTP sent successfully to existing user')
       return { success: true }
     } catch (error) {
       return { 
@@ -79,7 +114,7 @@ export class OTPService {
    * Verify OTP code
    */
   async verifyOTP(phoneNumber: string, otp: string): Promise<OTPResult> {
-    const phoneValidation = this.validatePhoneNumber(phoneNumber)
+    const phoneValidation = validateUKPhoneNumber(phoneNumber)
     if (!phoneValidation.valid) {
       return { success: false, error: phoneValidation.error }
     }
@@ -91,14 +126,18 @@ export class OTPService {
 
     try {
       const supabase = await createClient()
-      const formattedPhone = this.formatPhoneNumber(phoneNumber)
+      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+      
+      if (!normalizedPhone) {
+        return { success: false, error: "Invalid phone number format" }
+      }
       
       // For phone OTP verification, we need to use the correct flow
       const {
         data: { session },
         error,
       } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
+        phone: normalizedPhone,
         token: otp,
         type: 'sms',
       })
@@ -124,23 +163,56 @@ export class OTPService {
    * Resend OTP to phone number
    */
   async resendOTP(phoneNumber: string): Promise<OTPResult> {
-    const validation = this.validatePhoneNumber(phoneNumber)
+    const validation = validateUKPhoneNumber(phoneNumber)
     if (!validation.valid) {
       return { success: false, error: validation.error }
     }
 
     try {
       const supabase = await createClient()
-      const formattedPhone = this.formatPhoneNumber(phoneNumber)
+      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
       
+      if (!normalizedPhone) {
+        return { success: false, error: "Invalid phone number format" }
+      }
+      
+      // Try to resend OTP for existing user first
+      console.log('📱 Server: Attempting to resend OTP for existing user:', normalizedPhone)
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        phone: normalizedPhone,
+        options: {
+          shouldCreateUser: false, // Don't create user if they don't exist
+        }
       })
 
       if (error) {
-        return { success: false, error: error.message }
+        // Check if the error indicates user doesn't exist
+        if (error.message.includes('Signups not allowed') || 
+            error.message.includes('User not found') ||
+            error.message.includes('Invalid login credentials')) {
+          
+          console.log('📱 Server: User not found during resend, creating new account with OTP')
+          // User doesn't exist, create new user with OTP
+          const { error: signUpError } = await supabase.auth.signInWithOtp({
+            phone: normalizedPhone,
+            options: {
+              shouldCreateUser: true, // Create user for new signups
+            }
+          })
+
+          if (signUpError) {
+            return { success: false, error: signUpError.message }
+          }
+
+          return { success: true }
+        } else {
+          // Other error occurred
+          return { success: false, error: error.message }
+        }
       }
 
+      // If no error, OTP was resent successfully to existing user
+      console.log('📱 Server: OTP resent successfully to existing user')
       return { success: true }
     } catch (error) {
       return { 
@@ -163,22 +235,8 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-/**
- * Utility function to validate phone number format
- */
-export function validatePhoneNumber(phone: string): { valid: boolean; error?: string } {
-  const phoneRegex = /^\+[1-9]\d{1,14}$/
-  const cleaned = phone.replace(/[^\d+]/g, '')
-  
-  if (!phoneRegex.test(cleaned)) {
-    return {
-      valid: false,
-      error: "Please enter a valid phone number with country code (e.g., +1234567890)"
-    }
-  }
-  
-  return { valid: true }
-}
+// Re-export phone utilities for backward compatibility
+export { validateUKPhoneNumber } from '@/lib/utils/phone'
 
 /**
  * Utility function to validate OTP format

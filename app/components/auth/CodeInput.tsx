@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatTime } from '@/lib/auth/otp-client';
+import { formatUKPhoneForDisplay, normalizeUKPhoneNumber } from '@/lib/utils/phone';
 
 interface CodeInputProps {
   phoneNumber: string;
@@ -31,6 +32,18 @@ export default function CodeInput({
   resendError 
 }: CodeInputProps) {
 
+  // Format the phone number for display
+  const displayPhoneNumber = React.useMemo(() => {
+    // First normalize the phone number to ensure it has +44 prefix
+    const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+    if (normalizedPhone) {
+      // Then format it for display
+      return formatUKPhoneForDisplay(normalizedPhone)
+    }
+    // Fallback to original if normalization fails
+    return phoneNumber
+  }, [phoneNumber])
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
@@ -38,7 +51,7 @@ export default function CodeInput({
           Verification Code
         </label>
         <p className="text-sm text-gray-600 mb-2">
-          We sent a code to {phoneNumber}
+          We sent a code to <span className="font-medium">{displayPhoneNumber}</span>
         </p>
         <input
           type="text"
@@ -72,7 +85,7 @@ export default function CodeInput({
       <div className="text-center">
         {otpResendTimer > 0 ? (
           <p className="text-sm text-gray-500">
-            Resend code in {otpResendTimer} seconds
+            Resend code in {formatTime(otpResendTimer)}
           </p>
         ) : (
           <button
