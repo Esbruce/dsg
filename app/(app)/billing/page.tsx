@@ -66,6 +66,8 @@ export default function BillingPage() {
   // Action handlers
   const handleUpgrade = async () => {
     try {
+      console.log('Starting checkout process...');
+      
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,18 +75,28 @@ export default function BillingPage() {
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
+      console.log('Checkout response status:', checkoutRes.status);
+
       if (!checkoutRes.ok) {
-        throw new Error(`Checkout failed: ${checkoutRes.status} ${checkoutRes.statusText}`);
+        const errorData = await checkoutRes.json().catch(() => ({}));
+        console.error('Checkout failed:', { status: checkoutRes.status, error: errorData });
+        throw new Error(`Checkout failed: ${checkoutRes.status} ${checkoutRes.statusText}${errorData.error ? ` - ${errorData.error}` : ''}`);
       }
 
       const checkoutData = await checkoutRes.json();
+      console.log('Checkout data received:', checkoutData);
+      
       if (checkoutData.url) {
+        console.log('Redirecting to checkout URL:', checkoutData.url);
         window.location.href = checkoutData.url;
       } else {
+        console.error('No checkout URL in response:', checkoutData);
         throw new Error("No checkout URL received");
       }
     } catch (err) {
-      alert("Error redirecting to checkout: " + (err as Error).message);
+      console.error('Checkout error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      alert("Error redirecting to checkout: " + errorMessage);
     }
   };
 

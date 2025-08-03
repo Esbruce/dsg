@@ -235,6 +235,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('Webhook received:', new Date().toISOString());
+  
   const sig = req.headers.get('stripe-signature');
   const rawBody = await req.text();
 
@@ -246,6 +248,7 @@ export async function POST(req: NextRequest) {
       sig!,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
+    console.log('Webhook signature verified, event type:', event.type);
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
@@ -417,6 +420,7 @@ export async function POST(req: NextRequest) {
         break;
     }
 
+    console.log('Webhook processed successfully:', event.type);
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Webhook processing error:', error);

@@ -179,15 +179,51 @@ export class ReferralService {
       const subscriptionPrice = parseInt(process.env.SUBSCRIPTION_PRICE_CENTS || '250'); // Default to £2.50 (250 cents)
       const referralReward = Math.floor(subscriptionPrice * 0.5); // 50% discount
 
-      // Add balance to Stripe customer
+      // Validate reward amount
+      if (referralReward <= 0) {
+        console.error('❌ Invalid referral reward amount:', referralReward);
+        return;
+      }
+
+      // Get current customer balance first
+      let currentBalance = 0;
+      try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+        const customer = await stripe.customers.retrieve(referrer.stripe_customer_id);
+        if (customer && !customer.deleted) {
+          currentBalance = customer.balance || 0;
+        }
+      } catch (balanceError) {
+        console.error('❌ Error retrieving current customer balance:', balanceError);
+        // Continue with balance application even if retrieval fails
+      }
+
+      // Add balance to Stripe customer with improved error handling
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      const newBalance = currentBalance - referralReward; // Negative = credit
+      
+      // Validate new balance is reasonable (not too negative)
+      if (newBalance < -10000) { // £100 limit
+        console.error('❌ New balance would be too negative:', newBalance);
+        return;
+      }
+
       await stripe.customers.update(referrer.stripe_customer_id, {
-        balance: -referralReward // Negative = credit
+        balance: newBalance
       });
 
-      console.log(`✅ Applied $${referralReward/100} referral reward to user ${referrerId}`);
+      console.log(`✅ Applied £${referralReward/100} referral reward to user ${referrerId}. Balance: £${currentBalance/100} → £${newBalance/100}`);
     } catch (error) {
       console.error('❌ Error applying referral reward:', error);
+      
+      // Log specific error details for debugging
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          referrerId
+        });
+      }
     }
   }
 

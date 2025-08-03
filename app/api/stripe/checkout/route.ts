@@ -8,6 +8,92 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-05-28.basil',
 });
 
+// GET method for testing checkout logic
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const test = searchParams.get('test');
+    
+    if (test === 'checkout-logic') {
+      // Test the checkout logic without creating a session
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const authenticatedUserId = user.id;
+
+      // Test discount status retrieval
+      let discountStatus;
+      try {
+        discountStatus = await referralService.getReferrerDiscountStatus(authenticatedUserId);
+      } catch (discountError) {
+        discountStatus = { hasDiscount: false, discountPercentage: 0 };
+      }
+
+      // Test user data retrieval
+      const { data: userData, error } = await supabaseAdmin
+        .from('users')
+        .select('stripe_customer_id, discounted')
+        .eq('id', authenticatedUserId)
+        .single();
+
+      // Test pricing calculation
+      const subscriptionPrice = parseInt(process.env.SUBSCRIPTION_PRICE_CENTS || '250');
+      const originalPrice = subscriptionPrice / 100;
+      const discountedPrice = discountStatus.hasDiscount ? originalPrice * (1 - discountStatus.discountPercentage / 100) : originalPrice;
+      const unitAmount = Math.round(discountedPrice * 100);
+
+      // Test customer balance retrieval
+      let customerBalance = 0;
+      if (userData?.stripe_customer_id) {
+        try {
+          const customer = await stripe.customers.retrieve(userData.stripe_customer_id);
+          if (customer && !customer.deleted) {
+            customerBalance = customer.balance || 0;
+          }
+        } catch (balanceError) {
+          console.error('Balance retrieval error:', balanceError);
+        }
+      }
+
+      return NextResponse.json({
+        status: 'Checkout logic test completed',
+        data: {
+          userId: authenticatedUserId,
+          discountStatus,
+          userData,
+          pricing: {
+            subscriptionPrice,
+            originalPrice,
+            discountedPrice,
+            unitAmount,
+            isValid: unitAmount > 0
+          },
+          customerBalance,
+          environment: {
+            STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? 'present' : 'missing',
+            NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ? 'present' : 'missing',
+            SUBSCRIPTION_PRICE_CENTS: process.env.SUBSCRIPTION_PRICE_CENTS || '250'
+          }
+        }
+      });
+    }
+
+    return NextResponse.json({ 
+      message: 'Checkout endpoint is accessible',
+      test_endpoints: {
+        checkout_logic: '/api/stripe/checkout?test=checkout-logic'
+      }
+    });
+  } catch (error) {
+    console.error('Checkout test error:', error);
+    return NextResponse.json({ error: 'Test failed' }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // 🔒 SECURITY: Verify authenticated user from session
@@ -30,7 +116,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user's discount status
-    const discountStatus = await referralService.getReferrerDiscountStatus(authenticatedUserId);
+    let discountStatus;
+    try {
+      discountStatus = await referralService.getReferrerDiscountStatus(authenticatedUserId);
+      console.log('Discount status retrieved:', { userId: authenticatedUserId, discountStatus });
+    } catch (discountError) {
+      console.error('Error getting discount status:', discountError);
+      // Fall back to no discount if there's an error
+      discountStatus = { hasDiscount: false, discountPercentage: 0 };
+    }
     
     // Get user record for referral info
     const { data: userData, error } = await supabaseAdmin
@@ -47,6 +141,13 @@ export async function POST(req: NextRequest) {
     const subscriptionPrice = parseInt(process.env.SUBSCRIPTION_PRICE_CENTS || '250'); // Default to £2.50 (250 cents)
     const originalPrice = subscriptionPrice / 100; // Convert to pounds
     const discountedPrice = discountStatus.hasDiscount ? originalPrice * (1 - discountStatus.discountPercentage / 100) : originalPrice;
+    
+    // Validate discounted price is reasonable
+    const unitAmount = Math.round(discountedPrice * 100);
+    if (unitAmount <= 0) {
+      console.error('Invalid unit amount calculated:', { discountedPrice, unitAmount, discountStatus });
+      return NextResponse.json({ error: 'Invalid pricing calculation. Please contact support.' }, { status: 500 });
+    }
     
     // Create or get Stripe customer
     let customerId = userData.stripe_customer_id;
@@ -66,14 +167,17 @@ export async function POST(req: NextRequest) {
         .update({ stripe_customer_id: customerId })
         .eq('id', authenticatedUserId);
     } else {
-      // Get customer balance if customer exists
+      // Get customer balance if customer exists - with improved error handling
       try {
         const customer = await stripe.customers.retrieve(customerId);
         if (customer && !customer.deleted) {
           customerBalance = customer.balance || 0;
+          console.log('Customer balance retrieved:', { customerId, balance: customerBalance });
         }
       } catch (balanceError) {
         console.error('Error retrieving customer balance:', balanceError);
+        // Don't fail the checkout if balance retrieval fails
+        customerBalance = 0;
       }
     }
 
@@ -92,7 +196,7 @@ export async function POST(req: NextRequest) {
                 ? 'Unlimited medical note summaries - 50% referral discount applied!' 
                 : 'Unlimited medical note summaries',
             },
-            unit_amount: Math.round(discountedPrice * 100), // Use discounted price directly
+            unit_amount: unitAmount, // Use validated unit amount
             recurring: {
               interval: 'month',
             },
@@ -116,14 +220,18 @@ export async function POST(req: NextRequest) {
       },
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?checkout=cancel`,
-      // Add customer balance if user has discount
-      ...(discountStatus.hasDiscount && {
-        customer_update: {
-          address: 'auto',
-        },
-        // Note: Customer balance will be applied automatically by Stripe
-        // when the invoice is created, based on the balance we set earlier
-      }),
+      // Simplified customer update - remove potential conflicts
+      customer_update: {
+        address: 'auto',
+      },
+    });
+
+    console.log('Checkout session created successfully:', {
+      sessionId: session.id,
+      hasDiscount: discountStatus.hasDiscount,
+      unitAmount,
+      customerBalance,
+      customerId
     });
 
     return NextResponse.json({ 
@@ -143,6 +251,22 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Stripe checkout error:', err);
-    return NextResponse.json({ error: 'Unable to create checkout session. Please try again.' }, { status: 500 });
+    
+    // Provide more specific error messages
+    if (err.type === 'StripeInvalidRequestError') {
+      return NextResponse.json({ 
+        error: 'Invalid checkout request. Please try again or contact support.' 
+      }, { status: 400 });
+    }
+    
+    if (err.type === 'StripeCardError') {
+      return NextResponse.json({ 
+        error: 'Payment method error. Please check your card details.' 
+      }, { status: 400 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Unable to create checkout session. Please try again.' 
+    }, { status: 500 });
   }
 }
