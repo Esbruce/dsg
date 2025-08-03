@@ -2,6 +2,9 @@
 
 import React from 'react'
 import { validateUKPhoneNumber, normalizeUKPhoneNumber } from '@/lib/utils/phone'
+import { clientAuthService } from './client-auth-service'
+import { validateOTP, OTP_ERROR_MESSAGES, OTP_CONSTANTS } from './otp-utils'
+import type { Session } from '@supabase/supabase-js'
 
 export interface OTPState {
   otp: string
@@ -16,13 +19,14 @@ export interface OTPState {
 
 export interface OTPActions {
   sendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
-  verifyOTP: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; session?: any; remaining?: number; resetTime?: number }>
+  verifyOTP: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number }>
   resendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
   resetOTPState: () => void
 }
 
 /**
  * Custom hook for OTP state management
+ * Provides state and methods for managing OTP flow in React components
  */
 export function useOTPState() {
   const [state, setState] = React.useState<OTPState>({
@@ -36,7 +40,7 @@ export function useOTPState() {
     isOTPVerified: false,
   })
 
-  const resetOTPState = () => {
+  const resetOTPState = React.useCallback(() => {
     setState({
       otp: "",
       otpError: "",
@@ -47,11 +51,11 @@ export function useOTPState() {
       otpResendError: "",
       isOTPVerified: false,
     })
-  }
+  }, [])
 
-  const updateState = (updates: Partial<OTPState>) => {
+  const updateState = React.useCallback((updates: Partial<OTPState>) => {
     setState(prev => ({ ...prev, ...updates }))
-  }
+  }, [])
 
   return {
     state,
@@ -61,7 +65,8 @@ export function useOTPState() {
 }
 
 /**
- * Timer utilities for OTP countdown
+ * Timer utilities for OTP countdown and resend cooldown
+ * Manages countdown timers for OTP expiration and resend restrictions
  */
 export function useOTPTimers() {
   const [otpTimer, setOTPTimer] = React.useState(0)
@@ -89,15 +94,15 @@ export function useOTPTimers() {
     return () => clearInterval(interval)
   }, [otpResendTimer])
 
-  const startTimers = () => {
-    setOTPTimer(60) // 1 minute
-    setOTPResendTimer(60) // 1 minute cooldown for resend
-  }
+  const startTimers = React.useCallback(() => {
+    setOTPTimer(OTP_CONSTANTS.OTP_TIMEOUT)
+    setOTPResendTimer(OTP_CONSTANTS.RESEND_COOLDOWN)
+  }, [])
 
-  const resetTimers = () => {
+  const resetTimers = React.useCallback(() => {
     setOTPTimer(0)
     setOTPResendTimer(0)
-  }
+  }, [])
 
   return {
     otpTimer,
@@ -108,51 +113,15 @@ export function useOTPTimers() {
 }
 
 /**
- * Client-side OTP service that calls API routes
+ * Client-side OTP service that handles API calls and client-side operations
+ * Provides methods for sending, verifying, and resending OTP codes
  */
 export class OTPClientService {
   /**
-   * Check if a user exists by normalized phone number
-   */
-  private async checkUserExists(normalizedPhone: string): Promise<boolean> {
-    try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      
-      // Try to sign in with OTP without creating a user
-      // If this succeeds, the user exists
-      // If it fails with "Signups not allowed" or "User not found", the user doesn't exist
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-        }
-      })
-
-      if (error) {
-        // Check if the error indicates user doesn't exist
-        if (error.message.includes('Signups not allowed') || 
-            error.message.includes('User not found') ||
-            error.message.includes('Invalid login credentials')) {
-          console.log('🔍 User does not exist:', normalizedPhone)
-          return false
-        }
-        // For other errors, log and assume user doesn't exist
-        console.log('🔍 User existence check error:', error.message)
-        return false
-      }
-
-      // If no error, user exists
-      console.log('🔍 User exists:', normalizedPhone)
-      return true
-    } catch (error) {
-      console.log('🔍 User existence check failed:', error)
-      return false
-    }
-  }
-
-  /**
-   * Send OTP via API route
+   * Send OTP via API route with optional CAPTCHA verification
+   * @param phoneNumber - The phone number to send OTP to
+   * @param captchaToken - Optional CAPTCHA token for verification
+   * @returns Promise with success status and rate limiting info
    */
   async sendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
     try {
@@ -165,7 +134,7 @@ export class OTPClientService {
       // Normalize phone number
       const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
       if (!normalizedPhone) {
-        return { success: false, error: "Invalid phone number format" }
+        return { success: false, error: OTP_ERROR_MESSAGES.INVALID_PHONE_FORMAT }
       }
 
       // Call API route with CAPTCHA token
@@ -195,111 +164,57 @@ export class OTPClientService {
         resetTime: result.resetTime || 0
       }
     } catch (error) {
-      console.log('❌ OTP Client: Send OTP unexpected error:', error)
+      console.error('❌ OTP Client: Send OTP unexpected error:', error)
       return { 
         success: false, 
-        error: "An unexpected error occurred. Please try again." 
+        error: OTP_ERROR_MESSAGES.UNEXPECTED_ERROR
       }
     }
   }
 
   /**
-   * Verify OTP via API route
+   * Verify OTP using client auth service with real-time session updates
+   * @param phoneNumber - The phone number the OTP was sent to
+   * @param otp - The 6-digit OTP code to verify
+   * @returns Promise with verification result and session info
    */
-  async verifyOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; error?: string; session?: any; remaining?: number; resetTime?: number }> {
-    return new Promise(async (resolve) => {
-      try {
-        // Validate phone number first
-        const phoneValidation = validateUKPhoneNumber(phoneNumber)
-        if (!phoneValidation.valid) {
-          resolve({ success: false, error: phoneValidation.error })
-          return
-        }
-
-        // Normalize phone number
-        const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
-        if (!normalizedPhone) {
-          resolve({ success: false, error: "Invalid phone number format" })
-          return
-        }
-
-        // Import the client-side Supabase client
-        const { createClient } = await import('@/lib/supabase/client')
-        const supabase = createClient()
-        
-        // Set up auth state listener to detect successful verification
-        let authStateResolved = false;
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'SIGNED_IN' && session && !authStateResolved) {
-            authStateResolved = true;
-            subscription.unsubscribe();
-            resolve({ 
-              success: true, 
-              session,
-              remaining: 0,
-              resetTime: 0
-            });
-          }
-        });
-        
-        // Attempt verification
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.verifyOtp({
-          phone: normalizedPhone,
-          token: otp,
-          type: 'sms',
-        });
-
-        if (error) {
-          console.log('❌ OTP Client: Supabase error:', error.message, error)
-          subscription.unsubscribe();
-          
-          // Handle specific error types
-          if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
-            resolve({ success: false, error: "Verification code expired or invalid. Please request a new code." })
-          } else if (error.message?.includes('Invalid OTP') || error.message?.includes('Invalid token')) {
-            resolve({ success: false, error: "Invalid verification code. Please check and try again." })
-          } else {
-            resolve({ success: false, error: error.message })
-          }
-          return;
-        }
-
-        // If we got a session directly, use it
-        if (session && !authStateResolved) {
-          authStateResolved = true;
-          subscription.unsubscribe();
-          resolve({ 
-            success: true, 
-            session,
-            remaining: 0,
-            resetTime: 0
-          });
-          return;
-        }
-
-        // If no session and no error, wait a bit for auth state change
-        if (!authStateResolved) {
-          setTimeout(() => {
-            if (!authStateResolved) {
-              subscription.unsubscribe();
-              resolve({ success: false, error: "Verification failed" });
-            }
-          }, 3000); // Wait 3 seconds for auth state change
-        }
-      } catch (error) {
-        resolve({ 
-          success: false, 
-          error: "An unexpected error occurred. Please try again." 
-        });
+  async verifyOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number }> {
+    try {
+      // Validate phone number first
+      const phoneValidation = validateUKPhoneNumber(phoneNumber)
+      if (!phoneValidation.valid) {
+        return { success: false, error: phoneValidation.error }
       }
-    });
+
+      // Validate OTP format
+      const otpValidation = validateOTP(otp)
+      if (!otpValidation.valid) {
+        return { success: false, error: otpValidation.error }
+      }
+
+      // Use client auth service for verification
+      const result = await clientAuthService.verifyOTP(phoneNumber, otp)
+      
+      return { 
+        success: result.success, 
+        error: result.error,
+        session: result.session,
+        remaining: 0,
+        resetTime: 0
+      }
+    } catch (error) {
+      console.error('❌ OTP Client: Verify OTP unexpected error:', error)
+      return { 
+        success: false, 
+        error: OTP_ERROR_MESSAGES.UNEXPECTED_ERROR
+      }
+    }
   }
 
   /**
-   * Resend OTP via API route
+   * Resend OTP using client auth service with smart user detection
+   * @param phoneNumber - The phone number to resend OTP to
+   * @returns Promise with resend result and rate limiting info
    */
   async resendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
     try {
@@ -309,66 +224,24 @@ export class OTPClientService {
         return { success: false, error: validation.error }
       }
 
-      // Normalize phone number
-      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
-      if (!normalizedPhone) {
-        return { success: false, error: "Invalid phone number format" }
-      }
-
-      // Import the client-side Supabase client
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
+      // Use client auth service for smart sign in/sign up
+      const result = await clientAuthService.signInOrSignUp(phoneNumber)
       
-      // Try to resend OTP for existing user first
-      console.log('📱 Attempting to resend OTP for existing user:', normalizedPhone)
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-        }
-      })
-
-      if (error) {
-        // Check if the error indicates user doesn't exist
-        if (error.message.includes('Signups not allowed') || 
-            error.message.includes('User not found') ||
-            error.message.includes('Invalid login credentials')) {
-          
-          console.log('📱 User not found during resend, creating new account with OTP')
-          // User doesn't exist, create new user with OTP
-          const { error: signUpError } = await supabase.auth.signInWithOtp({
-            phone: normalizedPhone,
-            options: {
-              shouldCreateUser: true, // Create user for new signups
-            }
-          })
-
-          if (signUpError) {
-            return { success: false, error: signUpError.message }
-          }
-
-          return { 
-            success: true,
-            remaining: 0,
-            resetTime: 0
-          }
-        } else {
-          // Other error occurred
-          return { success: false, error: error.message }
-        }
+      if (result.success) {
+        console.log(`📱 Client: OTP resent successfully to ${result.isNewUser ? 'new' : 'existing'} user`)
       }
 
-      // If no error, OTP was resent successfully to existing user
-      console.log('📱 OTP resent successfully to existing user')
       return { 
-        success: true,
+        success: result.success,
+        error: result.error,
         remaining: 0,
         resetTime: 0
       }
     } catch (error) {
+      console.error('❌ OTP Client: Resend OTP unexpected error:', error)
       return { 
         success: false, 
-        error: "Failed to resend code. Please try again." 
+        error: OTP_ERROR_MESSAGES.RESEND_FAILED
       }
     }
   }
@@ -377,29 +250,13 @@ export class OTPClientService {
 // Create a singleton instance
 export const otpClientService = new OTPClientService()
 
-// Test function to check Supabase connection
-export async function testSupabaseConnection() {
-  try {
-    const { createClient } = await import('@/lib/supabase/client')
-    const supabase = createClient()
-    
-    const { data, error } = await supabase.auth.getSession()
-    
-    if (error) {
-      return false
-    }
-    
-    return true
-  } catch (error) {
-    return false
-  }
+/**
+ * Test function to check Supabase connection
+ * @returns Promise<boolean> - True if connection is successful
+ */
+export async function testSupabaseConnection(): Promise<boolean> {
+  return await clientAuthService.testConnection()
 }
 
-/**
- * Utility function to format time for display
- */
-export function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-} 
+// Re-export utilities for backward compatibility
+export { formatTime } from './otp-utils' 

@@ -1,11 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
 import { validateUKPhoneNumber, normalizeUKPhoneNumber } from '@/lib/utils/phone'
 import { captchaService } from './captcha'
+import { authService } from './auth-service'
+import { validateOTP, OTP_ERROR_MESSAGES } from './otp-utils'
+import type { Session } from '@supabase/supabase-js'
 
 export interface OTPResult {
   success: boolean
   error?: string
-  session?: any
+  session?: Session | null
 }
 
 export interface SendOTPRequest {
@@ -14,23 +16,15 @@ export interface SendOTPRequest {
   ipAddress?: string
 }
 
+/**
+ * Server-side OTP service for handling OTP operations with security features
+ * Integrates CAPTCHA verification, rate limiting, and smart auth logic
+ */
 export class OTPService {
   /**
-   * Validate OTP format
-   */
-  private validateOTP(otp: string): { valid: boolean; error?: string } {
-    if (!otp || otp.length !== 6) {
-      return {
-        valid: false,
-        error: "Please enter a valid 6-digit code"
-      }
-    }
-    
-    return { valid: true }
-  }
-
-  /**
    * Send OTP to phone number with optional CAPTCHA verification
+   * @param request - The OTP request containing phone number and optional CAPTCHA token
+   * @returns Promise<OTPResult> - Result of the OTP sending attempt
    */
   async sendOTP(request: SendOTPRequest): Promise<OTPResult> {
     const { phoneNumber, captchaToken, ipAddress } = request
@@ -41,11 +35,10 @@ export class OTPService {
     }
 
     try {
-      const supabase = await createClient()
       const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
       
       if (!normalizedPhone) {
-        return { success: false, error: "Invalid phone number format" }
+        return { success: false, error: OTP_ERROR_MESSAGES.INVALID_PHONE_FORMAT }
       }
 
       // Verify CAPTCHA if token is provided
@@ -64,54 +57,28 @@ export class OTPService {
         console.log('✅ CAPTCHA verification successful, score:', captchaResult.score)
       }
       
-      // Try to send OTP for existing user first
-      console.log('📱 Server: Attempting to send OTP for existing user:', normalizedPhone)
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-        }
-      })
-
-      if (error) {
-        // Check if the error indicates user doesn't exist
-        if (error.message.includes('Signups not allowed') || 
-            error.message.includes('User not found') ||
-            error.message.includes('Invalid login credentials')) {
-          
-          console.log('📱 Server: User not found, creating new account with OTP')
-          // User doesn't exist, create new user with OTP
-          const { error: signUpError } = await supabase.auth.signInWithOtp({
-            phone: normalizedPhone,
-            options: {
-              shouldCreateUser: true, // Create user for new signups
-            }
-          })
-
-          if (signUpError) {
-            return { success: false, error: signUpError.message }
-          }
-
-          return { success: true }
-        } else {
-          // Other error occurred
-          return { success: false, error: error.message }
-        }
+      // Use the auth service for smart sign in/sign up
+      const result = await authService.signInOrSignUp(phoneNumber)
+      
+      if (result.success) {
+        console.log(`📱 Server: OTP sent successfully to ${result.isNewUser ? 'new' : 'existing'} user`)
       }
-
-      // If no error, OTP was sent successfully to existing user
-      console.log('📱 Server: OTP sent successfully to existing user')
-      return { success: true }
+      
+      return { success: result.success, error: result.error }
     } catch (error) {
+      console.error('❌ OTP Service: Send OTP unexpected error:', error)
       return { 
         success: false, 
-        error: "An unexpected error occurred. Please try again." 
+        error: OTP_ERROR_MESSAGES.UNEXPECTED_ERROR
       }
     }
   }
 
   /**
-   * Verify OTP code
+   * Verify OTP code using the auth service
+   * @param phoneNumber - The phone number the OTP was sent to
+   * @param otp - The 6-digit OTP code to verify
+   * @returns Promise<OTPResult> - Result of the verification attempt
    */
   async verifyOTP(phoneNumber: string, otp: string): Promise<OTPResult> {
     const phoneValidation = validateUKPhoneNumber(phoneNumber)
@@ -119,48 +86,19 @@ export class OTPService {
       return { success: false, error: phoneValidation.error }
     }
 
-    const otpValidation = this.validateOTP(otp)
+    const otpValidation = validateOTP(otp)
     if (!otpValidation.valid) {
       return { success: false, error: otpValidation.error }
     }
 
-    try {
-      const supabase = await createClient()
-      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
-      
-      if (!normalizedPhone) {
-        return { success: false, error: "Invalid phone number format" }
-      }
-      
-      // For phone OTP verification, we need to use the correct flow
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.verifyOtp({
-        phone: normalizedPhone,
-        token: otp,
-        type: 'sms',
-      })
-
-      if (error) {
-        return { success: false, error: error.message }
-      }
-
-      if (session) {
-        return { success: true, session }
-      }
-
-      return { success: false, error: "Verification failed" }
-    } catch (error) {
-      return { 
-        success: false, 
-        error: "An unexpected error occurred. Please try again." 
-      }
-    }
+    // Use the auth service for verification
+    return await authService.verifyOTP(phoneNumber, otp)
   }
 
   /**
-   * Resend OTP to phone number
+   * Resend OTP to phone number using smart auth logic
+   * @param phoneNumber - The phone number to resend OTP to
+   * @returns Promise<OTPResult> - Result of the resend attempt
    */
   async resendOTP(phoneNumber: string): Promise<OTPResult> {
     const validation = validateUKPhoneNumber(phoneNumber)
@@ -169,55 +107,19 @@ export class OTPService {
     }
 
     try {
-      const supabase = await createClient()
-      const normalizedPhone = normalizeUKPhoneNumber(phoneNumber)
+      // Use the auth service for smart sign in/sign up
+      const result = await authService.signInOrSignUp(phoneNumber)
       
-      if (!normalizedPhone) {
-        return { success: false, error: "Invalid phone number format" }
+      if (result.success) {
+        console.log(`📱 Server: OTP resent successfully to ${result.isNewUser ? 'new' : 'existing'} user`)
       }
       
-      // Try to resend OTP for existing user first
-      console.log('📱 Server: Attempting to resend OTP for existing user:', normalizedPhone)
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-        }
-      })
-
-      if (error) {
-        // Check if the error indicates user doesn't exist
-        if (error.message.includes('Signups not allowed') || 
-            error.message.includes('User not found') ||
-            error.message.includes('Invalid login credentials')) {
-          
-          console.log('📱 Server: User not found during resend, creating new account with OTP')
-          // User doesn't exist, create new user with OTP
-          const { error: signUpError } = await supabase.auth.signInWithOtp({
-            phone: normalizedPhone,
-            options: {
-              shouldCreateUser: true, // Create user for new signups
-            }
-          })
-
-          if (signUpError) {
-            return { success: false, error: signUpError.message }
-          }
-
-          return { success: true }
-        } else {
-          // Other error occurred
-          return { success: false, error: error.message }
-        }
-      }
-
-      // If no error, OTP was resent successfully to existing user
-      console.log('📱 Server: OTP resent successfully to existing user')
-      return { success: true }
+      return { success: result.success, error: result.error }
     } catch (error) {
+      console.error('❌ OTP Service: Resend OTP unexpected error:', error)
       return { 
         success: false, 
-        error: "Failed to resend code. Please try again." 
+        error: OTP_ERROR_MESSAGES.RESEND_FAILED
       }
     }
   }
@@ -226,28 +128,6 @@ export class OTPService {
 // Create a singleton instance
 export const otpService = new OTPService()
 
-/**
- * Utility function to format time for display
- */
-export function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-// Re-export phone utilities for backward compatibility
+// Re-export utilities for backward compatibility
 export { validateUKPhoneNumber } from '@/lib/utils/phone'
-
-/**
- * Utility function to validate OTP format
- */
-export function validateOTP(otp: string): { valid: boolean; error?: string } {
-  if (!otp || otp.length !== 6) {
-    return {
-      valid: false,
-      error: "Please enter a valid 6-digit code"
-    }
-  }
-  
-  return { valid: true }
-} 
+export { validateOTP, formatTime } from './otp-utils' 

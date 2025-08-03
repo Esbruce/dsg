@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 interface TurnstileCaptchaProps {
   onVerify: (token: string) => void
@@ -22,7 +22,7 @@ declare global {
           theme?: string
           size?: string
         }
-      ) => string // Changed from void to string - returns widget ID
+      ) => string
       reset: (widgetId: string) => void
     }
   }
@@ -38,20 +38,26 @@ export default function TurnstileCaptcha({
   const widgetIdRef = useRef<string>('')
   const isRenderedRef = useRef<boolean>(false)
   const scriptLoadedRef = useRef<boolean>(false)
+  const [debugInfo, setDebugInfo] = useState<string>('')
+  const [isVerifying, setIsVerifying] = useState<boolean>(false)
 
   useEffect(() => {
     console.log('🔍 TurnstileCaptcha: Component mounted')
     console.log('🔍 TurnstileCaptcha: Site key:', siteKey ? `${siteKey.substring(0, 10)}...` : 'NOT SET')
+    setDebugInfo(`Site key: ${siteKey ? 'Set' : 'NOT SET'}`)
     
     // Prevent multiple renders
     if (isRenderedRef.current) {
       console.log('🔍 TurnstileCaptcha: Already rendered, skipping')
+      setDebugInfo(prev => prev + ' | Already rendered')
       return
     }
     
     // Load Turnstile script if not already loaded
     if (!window.turnstile && !scriptLoadedRef.current) {
       console.log('🔍 TurnstileCaptcha: Loading Turnstile script...')
+      setDebugInfo(prev => prev + ' | Loading script')
+      
       const script = document.createElement('script')
       script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
       script.async = true
@@ -60,40 +66,49 @@ export default function TurnstileCaptcha({
 
       script.onload = () => {
         console.log('🔍 TurnstileCaptcha: Script loaded successfully')
+        setDebugInfo(prev => prev + ' | Script loaded')
         scriptLoadedRef.current = true
         renderCaptcha()
       }
       
       script.onerror = () => {
         console.error('❌ TurnstileCaptcha: Failed to load script')
+        setDebugInfo(prev => prev + ' | Script failed')
         onError('Failed to load CAPTCHA script')
       }
     } else if (window.turnstile) {
       console.log('🔍 TurnstileCaptcha: Script already loaded')
+      setDebugInfo(prev => prev + ' | Script already loaded')
       renderCaptcha()
     }
 
     function renderCaptcha() {
       console.log('🔍 TurnstileCaptcha: Attempting to render...')
+      setDebugInfo(prev => prev + ' | Attempting render')
+      
       if (!containerRef.current) {
         console.error('❌ TurnstileCaptcha: Container ref not found')
+        setDebugInfo(prev => prev + ' | No container')
         return
       }
       
       if (!window.turnstile) {
         console.error('❌ TurnstileCaptcha: Turnstile not available')
+        setDebugInfo(prev => prev + ' | Turnstile not available')
         return
       }
       
       if (!siteKey) {
         console.error('❌ TurnstileCaptcha: No site key provided')
-        onError('CAPTCHA configuration error')
+        setDebugInfo(prev => prev + ' | No site key')
+        onError('CAPTCHA configuration error - no site key provided')
         return
       }
 
       // Check if widget already exists in this container
       if (containerRef.current.querySelector('[data-turnstile-widget]')) {
         console.log('🔍 TurnstileCaptcha: Widget already exists in container')
+        setDebugInfo(prev => prev + ' | Widget exists')
         return
       }
 
@@ -104,24 +119,41 @@ export default function TurnstileCaptcha({
 
       try {
         console.log('🔍 TurnstileCaptcha: Rendering widget...')
+        setDebugInfo(prev => prev + ' | Rendering')
+        
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          theme: 'light', // Light theme for better visibility
-          size: 'normal', // Normal size checkbox
+          theme: 'light',
+          size: 'normal',
           callback: (token: string) => {
-            console.log('✅ Turnstile CAPTCHA verified')
+            if (isVerifying) {
+              console.log('🔍 TurnstileCaptcha: Already verifying, ignoring duplicate callback')
+              return
+            }
+            console.log('✅ Turnstile CAPTCHA verified, token length:', token.length)
+            setDebugInfo(prev => prev + ' | Verified')
+            setIsVerifying(true)
             onVerify(token)
           },
           'error-callback': () => {
+            if (isVerifying) {
+              console.log('🔍 TurnstileCaptcha: Already verifying, ignoring error callback')
+              return
+            }
             console.log('❌ Turnstile CAPTCHA error')
+            setDebugInfo(prev => prev + ' | Error')
+            setIsVerifying(true)
             onError('CAPTCHA verification failed. Please try again.')
           },
           'expired-callback': () => {
             console.log('⏰ Turnstile CAPTCHA expired')
+            setDebugInfo(prev => prev + ' | Expired')
+            setIsVerifying(false) // Reset for retry
             onError('CAPTCHA expired. Please try again.')
           }
         })
         console.log('✅ TurnstileCaptcha: Widget rendered successfully, ID:', widgetIdRef.current)
+        setDebugInfo(prev => prev + ' | Rendered')
         isRenderedRef.current = true
         
         // Mark container as having a widget
@@ -130,6 +162,7 @@ export default function TurnstileCaptcha({
         }
       } catch (error) {
         console.error('❌ Turnstile render error:', error)
+        setDebugInfo(prev => prev + ' | Render failed')
         onError('Failed to load CAPTCHA. Please refresh the page.')
       }
     }
@@ -147,14 +180,23 @@ export default function TurnstileCaptcha({
       }
       isRenderedRef.current = false
       widgetIdRef.current = ''
+      setIsVerifying(false)
     }
-  }, []) // Empty dependency array to prevent infinite loops
+  }, [siteKey, onVerify, onError]) // Added all dependencies
 
   return (
-    <div 
-      ref={containerRef} 
-      className={`turnstile-container ${className}`}
-      data-testid="turnstile-captcha"
-    />
+    <div className={className}>
+      <div 
+        ref={containerRef} 
+        className="turnstile-container"
+        data-testid="turnstile-captcha"
+      />
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-2 text-xs text-gray-500">
+          Debug: {debugInfo}
+        </div>
+      )}
+    </div>
   )
 } 

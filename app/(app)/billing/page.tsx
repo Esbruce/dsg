@@ -15,6 +15,7 @@ import UpgradeCard from "../../components/billing/UpgradeCard";
 import SubscriptionStatus from "../../components/billing/SubscriptionStatus";
 import PaymentMethod from "../../components/billing/PaymentMethod";
 import BillingActions from "../../components/billing/BillingActions";
+import ReferralDashboard from "../../components/billing/ReferralDashboard";
 
 export default function BillingPage() {
   // Local state (subscription data only)
@@ -44,6 +45,7 @@ export default function BillingPage() {
       const response = await fetch('/api/stripe/subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
@@ -67,6 +69,7 @@ export default function BillingPage() {
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
@@ -90,6 +93,7 @@ export default function BillingPage() {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
       
@@ -114,6 +118,7 @@ export default function BillingPage() {
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
         body: JSON.stringify({ cancel_immediately: false }),  // Only non-sensitive data
       });
 
@@ -146,7 +151,10 @@ export default function BillingPage() {
         {isLoading ? (
           <BillingContentSkeleton />
         ) : !isPaid ? (
-          <UpgradeCard onUpgrade={handleUpgrade} />
+          <div className="space-y-6">
+            <UpgradeCard onUpgrade={handleUpgrade} />
+            <ReferralDashboard />
+          </div>
         ) : (
           <div className="space-y-6">
             <SubscriptionStatus 
@@ -162,6 +170,8 @@ export default function BillingPage() {
               onManagePayment={handleManagePayment}
               onCancelSubscription={handleCancelSubscription}
             />
+
+            <ReferralDashboard />
           </div>
         )}
       </div>

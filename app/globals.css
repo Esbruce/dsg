@@ -4,15 +4,15 @@
 
   /* Border Thickness */
 --rotating-border-thickness: 5px;
---color-border-1: #e8f5fe80;
---color-border-2: #b0b5c8;
+--color-border-1: #e8f5fe;
+--color-border-2: #9c9faa;
 --color-border-3: #a9c5e1;
 --color-border-4: #8ab6fc;
 
   /* Primary Colors */
---color-primary: #00a8a8;      /* Your current teal */
+--color-primary: #01a5a5;      /* Your current teal */
 --color-primary-dark: #03A1AC;
---color-primary-light: #03A8A8;
+--color-primary-light: #06bebe;
 --color-blocked: #eeeeee;
 
 --color-process-1: #06fffb;
@@ -43,10 +43,10 @@
 --color-error: #EF4444;
 --color-info: #3B82F6;
 
---color-bg-1: #f6fcff;
---color-bg-2: #ececec;
---color-bg-3: #fafdff;
---color-bg-4: #ffffff;
+--color-bg-1: #ffffff;
+--color-bg-2: #f4fcfc;
+--color-bg-3: #f7faff;
+--color-bg-4: #ffffffa9;
 --color-bg-5: #94A3B8;
 --color-bg-6: #64748B;
 --color-bg-7: #00275e;
@@ -271,7 +271,7 @@ button:disabled {
 
 /* Custom symmetric shadow */
 .shadow-symmetric {
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.062), 0 0 40px rgba(0, 0, 0, 0.034);
+  box-shadow: 0 0 1px rgba(63, 63, 63, 0.432), 0 0 40px rgba(0, 0, 0, 0.068);
 }
 
 /* Desktop-only viewport restriction */

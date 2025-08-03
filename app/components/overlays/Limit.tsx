@@ -46,7 +46,7 @@ export default function Limit({ onUpgrade, onClose, isVisible }: LimitProps) {
         {/* Additional Info */}
         <div className="mt-4 text-center">
           <p className="text-sm text-[var(--color-neutral-500)]">
-            Starting at £2.99/month • Cancel anytime
+            Starting at £2.50/month • Cancel anytime
           </p>
         </div>
       </div>

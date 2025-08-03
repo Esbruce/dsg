@@ -23,7 +23,7 @@ export default function InputSection({
   return (
     <div className="w-full h-full flex flex-col">
       {/* Input Container */}
-      <div className="backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-8 flex-1 flex flex-col">
+      <div className="backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-100)] rounded-2xl p-8 flex-1 flex flex-col">
         <div className="relative z-[3] flex-1 flex flex-col">
           {/* Medical Notes Input */}
           <div className="relative flex-1 flex flex-col mb-4">

@@ -278,39 +278,12 @@ export async function POST(req: NextRequest) {
           console.error('Failed to update user payment status:', updateError);
         }
 
-        // Handle referral reward
-        const { data: user, error: userError } = await supabaseAdmin
-          .from('users')
-          .select('referred_by')
-          .eq('id', userId)
-          .single();
-
-        if (userError) {
-          console.error('Failed to get user referral data:', userError);
-        } else if (user?.referred_by) {
-          const { data: inviter, error: inviterError } = await supabaseAdmin
-            .from('users')
-            .select('stripe_customer_id')
-            .eq('id', user.referred_by)
-            .single();
-
-          if (inviterError) {
-            console.error('Failed to get inviter data:', inviterError);
-          } else if (inviter?.stripe_customer_id) {
-            try {
-              // Reward inviter with a $5 credit
-              await stripe.customers.update(inviter.stripe_customer_id, {
-                balance: -299, // $5 credit in cents
-              });
-
-              await supabaseAdmin
-                .from('users')
-                .update({ has_referred_paid_user: true })
-                .eq('id', user.referred_by);
-            } catch (rewardError) {
-              console.error('Failed to process referral reward:', rewardError);
-            }
-          }
+        // Handle referral conversion using new referral system
+        try {
+          const { referralService } = await import('@/lib/referral/referral-service');
+          await referralService.convertReferral(userId);
+        } catch (referralError) {
+          console.error('Failed to process referral conversion:', referralError);
         }
 
         break;

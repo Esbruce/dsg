@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { validateUKPhoneNumber } from '@/lib/utils/phone';
 
 interface PhoneInputProps {
   phoneNumber: string;
@@ -11,8 +12,37 @@ interface PhoneInputProps {
 }
 
 export default function PhoneInput({ phoneNumber, onPhoneNumberChange, onSubmit, isProcessing, error }: PhoneInputProps) {
+  const [validationError, setValidationError] = useState<string>("");
+
+  // Validate phone number on every change
+  useEffect(() => {
+    if (phoneNumber.trim()) {
+      const validation = validateUKPhoneNumber(phoneNumber);
+      setValidationError(validation.valid ? "" : validation.error || "");
+    } else {
+      setValidationError("");
+    }
+  }, [phoneNumber]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Final validation before submitting
+    const validation = validateUKPhoneNumber(phoneNumber);
+    if (!validation.valid) {
+      console.log('❌ PhoneInput: Form submission blocked - invalid phone number:', phoneNumber, validation.error);
+      setValidationError(validation.error || "Invalid phone number");
+      return;
+    }
+    
+    console.log('✅ PhoneInput: Form submission allowed - valid phone number:', phoneNumber);
+    onSubmit(e);
+  };
+
+  const isFormValid = phoneNumber.trim() && !validationError && validateUKPhoneNumber(phoneNumber).valid;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
           UK Phone Number
@@ -35,18 +65,26 @@ export default function PhoneInput({ phoneNumber, onPhoneNumberChange, onSubmit,
         <p className="mt-1 text-xs text-gray-500">
           Enter your UK mobile or landline number (e.g., 07849 484659 or 020 7946 0958)
         </p>
-        {error && (
-          <p className="mt-1 text-sm text-red-600">{error}</p>
+        {(error || validationError) && (
+          <p className="mt-1 text-sm text-red-600">{error || validationError}</p>
         )}
       </div>
 
       <button
         type="submit"
-        disabled={isProcessing || !phoneNumber}
+        disabled={isProcessing || !isFormValid}
         className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors"
       >
         {isProcessing ? "Sending..." : "Send Code"}
       </button>
+      
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-500 mt-2">
+          Debug: Phone valid: {validateUKPhoneNumber(phoneNumber).valid ? '✅' : '❌'} | 
+          Length: {phoneNumber.length} | 
+          Form valid: {isFormValid ? '✅' : '❌'}
+        </div>
+      )}
     </form>
   );
 } 

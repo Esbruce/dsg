@@ -121,6 +121,7 @@ export default function Home() {
       const statusRes = await fetch("/api/user/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 
@@ -145,6 +146,7 @@ export default function Home() {
       const summaryRes = await fetch("/api/generate_summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ medical_notes: medicalNotes }),  // No user_id needed - authenticated server-side
       });
 
@@ -211,6 +213,7 @@ export default function Home() {
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 

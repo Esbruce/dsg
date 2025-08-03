@@ -6,6 +6,7 @@ import CodeInput from './CodeInput';
 import SuccessMessage from './SuccessMessage';
 import TurnstileCaptcha from './TurnstileCaptcha';
 import { otpClientService, useOTPState, useOTPTimers } from '@/lib/auth/otp-client';
+import { createUserWithReferral } from '@/lib/auth/referral-client';
 
 // Context for managing modal state
 interface LoginModalContextType {
@@ -142,6 +143,14 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         // No need to manually set it
         
         updateOTPState({ isOTPVerified: true, otpProcessing: false });
+        
+        // Handle referral if user came through a referral link
+        try {
+          await createUserWithReferral();
+        } catch (referralError) {
+          console.error('Error handling referral:', referralError);
+          // Don't fail the auth flow if referral fails
+        }
         
         // Trigger auth success callback to refresh user data
         if (onAuthSuccess) {

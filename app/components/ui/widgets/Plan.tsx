@@ -1,6 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useLoginModal } from "../../auth/LoginModal";
+import { useReferralDiscount } from "@/lib/hooks/useReferralDiscount";
 
 type PlanProps = {
   isPaid: boolean;
@@ -11,6 +12,7 @@ type PlanProps = {
 export default function Plan({ isPaid, onGoUnlimited, isAuthenticated }: PlanProps) {
   const router = useRouter();
   const { showInlineLoginModal } = useLoginModal();
+  const { hasDiscount, discountPercentage, isLoading } = useReferralDiscount();
 
   if (isPaid) {
     return (
@@ -36,6 +38,10 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated }: PlanPro
     );
   }
 
+  const originalPrice = 2.50; // £2.50
+  const discountedPrice = hasDiscount ? originalPrice * (1 - discountPercentage / 100) : originalPrice;
+  const savings = originalPrice - discountedPrice;
+
   return (
     <div className="bg-[var(--color-primary)] rounded-xl p-5 text-white shadow-lg">
       <div className="flex items-center gap-2 mb-3">
@@ -46,6 +52,16 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated }: PlanPro
         </div>
         <h3 className="font-bold text-lg">Upgrade to Unlimited</h3>
       </div>
+      
+      {/* Discount Badge */}
+      {hasDiscount && (
+        <div className="mb-3 inline-flex items-center gap-2 px-2 py-1 bg-green-500/20 text-green-100 rounded-full text-xs font-medium">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+          </svg>
+          {discountPercentage}% Referral Discount!
+        </div>
+      )}
       
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-teal-100">
@@ -61,18 +77,36 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated }: PlanPro
           Auto 50% off if you invite a paying friend
         </div>
       </div>
+
+      {/* Pricing Display */}
       <div className="bg-white/10 rounded-lg p-3 mb-4">
         <div className="text-center">
-          <div className="text-2xl font-bold">£1.99</div>
-          <div className="text-xs text-teal-200">per month</div>
+          {hasDiscount ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl font-bold">£{discountedPrice.toFixed(2)}</span>
+                <span className="text-sm line-through opacity-70">£{originalPrice.toFixed(2)}</span>
+              </div>
+              <div className="text-xs text-green-200 font-medium">
+                Save £{savings.toFixed(2)}/month!
+              </div>
+              <div className="text-xs text-teal-200">per month</div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-2xl font-bold">£{originalPrice.toFixed(2)}</div>
+              <div className="text-xs text-teal-200">per month</div>
+            </div>
+          )}
         </div>
       </div>
 
       <button 
         onClick={() => isAuthenticated ? onGoUnlimited() : showInlineLoginModal()}
-        className="w-full bg-white text-[var(--color-primary)] font-bold py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-md"
+        disabled={isLoading}
+        className="w-full bg-white text-[var(--color-primary)] font-bold py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-md disabled:opacity-50"
       >
-        Upgrade Now
+        {isLoading ? 'Loading...' : 'Upgrade Now'}
       </button>
       
       <p className="text-xs text-teal-200 text-center mt-2">

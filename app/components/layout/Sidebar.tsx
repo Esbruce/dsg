@@ -27,9 +27,9 @@ export default function Sidebar({
   isAuthenticated
 }: SidebarProps) {
   return (
-    <aside className="w-80 h-full bg-[var(--color-bg-1)] border-r border-[var(--color-neutral-200)] flex flex-col">
+    <aside className="w-80 h-full bg-[var(--color-bg-4)] border-r border-[var(--color-neutral-300)] flex flex-col">
       {/* Branding */}
-      <div className="p-6 border-b border-[var(--color-neutral-200)] flex-shrink-0">
+      <div className="p-6 border-b border-[var(--color-neutral-300)] flex-shrink-0">
         <div className="flex items-center gap-3 justify-center">
           <div>
             <h1 className="text-xl text-center font-bold text-gray-900">DSG</h1>

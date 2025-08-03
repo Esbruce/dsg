@@ -7,6 +7,7 @@ import Header from "../components/layout/Header";
 import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
 import { LoginModalProvider } from "../components/auth";
 import { SessionTimeoutWarning } from "../components/auth/SessionTimeoutWarning";
+import { processReferralUUIDFromURL } from "../../lib/auth/referral-utils";
 
 // Enhanced context interface
 interface UserDataContextType {
@@ -69,6 +70,7 @@ export default function AppLayout({
         fetch("/api/user/status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({}),
         })
       ]);
@@ -116,6 +118,7 @@ export default function AppLayout({
             const checkUserRes = await fetch("/api/user/check-exists", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify({}),
             });
             
@@ -128,6 +131,7 @@ export default function AppLayout({
                   const createUserRes = await fetch("/api/supabase/create-user", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
+                    credentials: "include",
                     body: JSON.stringify({}),
                   });
                   
@@ -136,6 +140,7 @@ export default function AppLayout({
                     const retryStatusRes = await fetch("/api/user/status", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
+                      credentials: "include",
                       body: JSON.stringify({}),
                     });
                     
@@ -208,6 +213,9 @@ export default function AppLayout({
 
   // Fetch user data on component mount and listen for auth changes
   useEffect(() => {
+    // Process referral UUID from URL on app load
+    processReferralUUIDFromURL();
+    
     // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
@@ -270,6 +278,7 @@ export default function AppLayout({
       const checkoutRes = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({}),  // No user_id needed - authenticated server-side
       });
 

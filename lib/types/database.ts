@@ -80,6 +80,7 @@ export type Database = {
           referred_by: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          discounted: boolean | null
         }
         Insert: {
           created_at?: string
@@ -91,6 +92,7 @@ export type Database = {
           referred_by?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          discounted?: boolean | null
         }
         Update: {
           created_at?: string
@@ -102,6 +104,7 @@ export type Database = {
           referred_by?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          discounted?: boolean | null
         }
         Relationships: []
       }

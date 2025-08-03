@@ -5,16 +5,12 @@ export interface CaptchaResult {
 }
 
 export class CaptchaService {
-  private readonly secretKey: string
+  private readonly secretKey: string | undefined
   private readonly threshold: number
 
   constructor() {
-    this.secretKey = process.env.TURNSTILE_SECRET_KEY!
+    this.secretKey = process.env.TURNSTILE_SECRET_KEY
     this.threshold = parseFloat(process.env.TURNSTILE_THRESHOLD || '0.5')
-    
-    if (!this.secretKey) {
-      throw new Error('TURNSTILE_SECRET_KEY is required')
-    }
   }
 
   /**
@@ -22,6 +18,12 @@ export class CaptchaService {
    */
   async verifyToken(token: string, ipAddress?: string): Promise<CaptchaResult> {
     try {
+      // Check if CAPTCHA is configured
+      if (!this.secretKey) {
+        console.warn('⚠️ TURNSTILE_SECRET_KEY not configured, skipping CAPTCHA verification')
+        return { success: true, score: 1.0 } // Allow request to proceed
+      }
+
       if (!token) {
         return { success: false, error: 'No CAPTCHA token provided' }
       }
@@ -87,6 +89,11 @@ export class CaptchaService {
     requestCount: number
     failedAttempts: number
   }): boolean {
+    // If CAPTCHA is not configured, don't require it
+    if (!this.secretKey) {
+      return false
+    }
+
     // Simple risk assessment for minimal implementation
     const { requestCount, failedAttempts } = riskFactors
     
