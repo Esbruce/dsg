@@ -181,26 +181,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+
+
     // Create checkout session with appropriate pricing
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       payment_method_types: ['card'],
       mode: 'subscription',
       line_items: [
         {
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: discountStatus.hasDiscount ? 'DSG Pro Subscription (50% Off)' : 'DSG Pro Subscription',
-              description: discountStatus.hasDiscount 
-                ? 'Unlimited medical note summaries - 50% referral discount applied!' 
-                : 'Unlimited medical note summaries',
-            },
-            unit_amount: unitAmount, // Use validated unit amount
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: process.env.STRIPE_PRICE_ID!, // Use the price ID
           quantity: 1,
         },
       ],
@@ -220,11 +210,45 @@ export async function POST(req: NextRequest) {
       },
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?checkout=cancel`,
-      // Simplified customer update - remove potential conflicts
       customer_update: {
         address: 'auto',
       },
-    });
+    } as Stripe.Checkout.SessionCreateParams;
+
+    // Add discount coupon if user has discount
+    if (discountStatus.hasDiscount) {
+      // Check if we already have a referral discount coupon
+      let couponId = process.env.STRIPE_REFERRAL_COUPON_ID;
+      
+      if (!couponId) {
+        // Create the coupon if it doesn't exist
+        try {
+          const coupon = await stripe.coupons.create({
+            percent_off: discountStatus.discountPercentage,
+            duration: 'forever',
+            name: 'Referral Discount',
+            metadata: {
+              discount_type: 'referral',
+              discount_percentage: discountStatus.discountPercentage.toString()
+            }
+          });
+          couponId = coupon.id;
+          console.log('Created referral discount coupon:', couponId);
+        } catch (couponError) {
+          console.error('Error creating coupon:', couponError);
+          // Continue without discount if coupon creation fails
+        }
+      }
+      
+      if (couponId) {
+        (sessionConfig as any).discounts = [{
+          coupon: couponId
+        }];
+        console.log('Applied referral discount coupon:', couponId);
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     console.log('Checkout session created successfully:', {
       sessionId: session.id,

@@ -149,83 +149,78 @@ export class ReferralService {
 
       console.log('✅ Updated referrer flags for user:', referredUser.referred_by);
 
-      // Apply referral reward to Stripe balance
-      await this.applyReferralReward(referredUser.referred_by);
+      // Note: No longer applying customer balance since we use coupons for permanent discounts
+      // The discount will be applied automatically via Stripe coupons
+      console.log('🎫 Referral discount will be applied via Stripe coupon system');
+      
+      // Apply retroactive discount to existing subscription if user has one
+      await this.applyRetroactiveDiscount(referredUser.referred_by);
     } catch (error) {
       console.error('❌ Error converting referral:', error);
     }
   }
 
   /**
-   * Apply referral reward to referrer's Stripe balance
+   * Apply retroactive discount to existing subscription
    */
-  async applyReferralReward(referrerId: string): Promise<void> {
+  async applyRetroactiveDiscount(userId: string): Promise<void> {
     try {
-      console.log('💰 Applying referral reward to user:', referrerId);
+      console.log('🔄 Applying retroactive discount to user:', userId);
       
-      // Get referrer's Stripe customer ID
-      const { data: referrer } = await supabaseAdmin
+      // Get user's Stripe customer ID and subscription ID
+      const { data: user } = await supabaseAdmin
         .from('users')
-        .select('stripe_customer_id')
-        .eq('id', referrerId)
+        .select('stripe_customer_id, stripe_subscription_id')
+        .eq('id', userId)
         .single();
 
-      if (!referrer?.stripe_customer_id) {
-        console.log('❌ Referrer has no Stripe customer ID:', referrerId);
+      if (!user?.stripe_customer_id || !user?.stripe_subscription_id) {
+        console.log('❌ User has no active subscription to apply discount to');
         return;
       }
 
-      // Calculate reward (50% of subscription price)
-      const subscriptionPrice = parseInt(process.env.SUBSCRIPTION_PRICE_CENTS || '250'); // Default to £2.50 (250 cents)
-      const referralReward = Math.floor(subscriptionPrice * 0.5); // 50% discount
-
-      // Validate reward amount
-      if (referralReward <= 0) {
-        console.error('❌ Invalid referral reward amount:', referralReward);
-        return;
+      // Check if we have a referral discount coupon
+      let couponId = process.env.STRIPE_REFERRAL_COUPON_ID;
+      
+      if (!couponId) {
+        // Create the coupon if it doesn't exist
+        try {
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+          const coupon = await stripe.coupons.create({
+            percent_off: 50, // 50% discount
+            duration: 'forever',
+            name: 'Referral Discount',
+            metadata: {
+              discount_type: 'referral',
+              discount_percentage: '50'
+            }
+          });
+          couponId = coupon.id;
+          console.log('Created referral discount coupon for retroactive discount:', couponId);
+        } catch (couponError) {
+          console.error('Error creating coupon for retroactive discount:', couponError);
+          return;
+        }
       }
 
-      // Get current customer balance first
-      let currentBalance = 0;
+      // Apply the coupon to the existing subscription
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        const customer = await stripe.customers.retrieve(referrer.stripe_customer_id);
-        if (customer && !customer.deleted) {
-          currentBalance = customer.balance || 0;
-        }
-      } catch (balanceError) {
-        console.error('❌ Error retrieving current customer balance:', balanceError);
-        // Continue with balance application even if retrieval fails
-      }
-
-      // Add balance to Stripe customer with improved error handling
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-      const newBalance = currentBalance - referralReward; // Negative = credit
-      
-      // Validate new balance is reasonable (not too negative)
-      if (newBalance < -10000) { // £100 limit
-        console.error('❌ New balance would be too negative:', newBalance);
-        return;
-      }
-
-      await stripe.customers.update(referrer.stripe_customer_id, {
-        balance: newBalance
-      });
-
-      console.log(`✅ Applied £${referralReward/100} referral reward to user ${referrerId}. Balance: £${currentBalance/100} → £${newBalance/100}`);
-    } catch (error) {
-      console.error('❌ Error applying referral reward:', error);
-      
-      // Log specific error details for debugging
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          referrerId
+        // Use the correct Stripe API method to apply coupon to subscription
+        await stripe.subscriptions.update(user.stripe_subscription_id, {
+          // @ts-ignore - Stripe API accepts coupon parameter
+          coupon: couponId
         });
+        
+        console.log('✅ Applied retroactive discount to subscription:', user.stripe_subscription_id);
+      } catch (subscriptionError) {
+        console.error('❌ Error applying retroactive discount to subscription:', subscriptionError);
       }
+    } catch (error) {
+      console.error('❌ Error applying retroactive discount:', error);
     }
   }
+
 
   /**
    * Get referrer's discount status

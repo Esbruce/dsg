@@ -220,6 +220,52 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
   }
+
+  if (test === 'clear-balances') {
+    // Clear customer balances from old discount system
+    
+    try {
+      // Get all customers with negative balances
+      const customers = await stripe.customers.list({
+        limit: 100,
+      });
+      
+      let clearedCount = 0;
+      let totalCleared = 0;
+      
+      for (const customer of customers.data) {
+        if (customer.balance && customer.balance < 0) {
+          console.log(`Clearing balance for customer ${customer.id}: £${(customer.balance / 100).toFixed(2)}`);
+          
+          try {
+            // Reset balance to 0
+            await stripe.customers.update(customer.id, {
+              balance: 0
+            });
+            
+            clearedCount++;
+            totalCleared += Math.abs(customer.balance);
+          } catch (error) {
+            console.error(`Failed to clear balance for customer ${customer.id}:`, error);
+          }
+        }
+      }
+      
+      return NextResponse.json({ 
+        status: 'Customer balances cleared',
+        clearedCount,
+        totalCleared: totalCleared / 100,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      return NextResponse.json({ 
+        status: 'Failed to clear balances',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }, { status: 500 });
+    }
+  }
   
   return NextResponse.json({ 
     status: 'Webhook endpoint is accessible',
@@ -304,6 +350,45 @@ export async function POST(req: NextRequest) {
 
         if (error) {
           console.error('Failed to update user for subscription creation:', error);
+        }
+
+        // Apply referral discount to subscription if user has discount
+        try {
+          const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('discounted')
+            .eq('stripe_customer_id', customerId)
+            .single();
+
+          if (user?.discounted) {
+            // Check if we have a referral discount coupon
+            let couponId = process.env.STRIPE_REFERRAL_COUPON_ID;
+            
+            if (!couponId) {
+              // Create the coupon if it doesn't exist
+              const coupon = await stripe.coupons.create({
+                percent_off: 50, // 50% discount
+                duration: 'forever',
+                name: 'Referral Discount',
+                metadata: {
+                  discount_type: 'referral',
+                  discount_percentage: '50'
+                }
+              });
+              couponId = coupon.id;
+              console.log('Created referral discount coupon for subscription:', couponId);
+            }
+
+            // Apply the coupon to the subscription
+            await stripe.subscriptions.update(subscription.id, {
+              // @ts-ignore - Stripe API accepts coupon parameter
+              coupon: couponId
+            });
+            
+            console.log('Applied referral discount coupon to subscription:', subscription.id);
+          }
+        } catch (discountError) {
+          console.error('Failed to apply referral discount to subscription:', discountError);
         }
 
         break;
@@ -393,24 +478,9 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
-        // Check if user qualifies for recurring referral reward
-        const { data: user, error } = await supabaseAdmin
-          .from('users')
-          .select('has_referred_paid_user')
-          .eq('stripe_customer_id', customerId)
-          .single();
-
-        if (error) {
-          console.error('Failed to check referral status:', error);
-        } else if (user?.has_referred_paid_user) {
-          try {
-            await stripe.customers.update(customerId, {
-              balance: -500, // $5 credit
-            });
-          } catch (rewardError) {
-            console.error('Failed to apply recurring referral reward:', rewardError);
-          }
-        }
+        // Note: No longer applying customer balance since we use coupons for permanent discounts
+        // The discount is handled automatically by Stripe's coupon system
+        console.log('Invoice created - discount handled by Stripe coupon system');
 
         break;
       }
