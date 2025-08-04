@@ -19,10 +19,10 @@ export interface SessionConfig {
 
 // Development configuration (shorter timeouts for testing)
 export const devSessionConfig: SessionConfig = {
-  sessionTimeoutMs: 5 * 60 * 1000,    // 5 minutes
-  warningTimeMs: 1 * 60 * 1000,       // 1 minute warning
-  refreshBufferMs: 2 * 60 * 1000,     // Refresh 2 minutes before expiry
-  refreshIntervalMs: 1 * 60 * 1000,   // Check every minute
+  sessionTimeoutMs: 15 * 60 * 1000,   // 15 minutes
+  warningTimeMs: 2 * 60 * 1000,       // 2 minutes warning
+  refreshBufferMs: 5 * 60 * 1000,     // Refresh 5 minutes before expiry
+  refreshIntervalMs: 2 * 60 * 1000,   // Check every 2 minutes
   maxSessionDurationMs: 24 * 60 * 60 * 1000, // 24 hours
   showSessionStatus: true,
   autoRefresh: true,
@@ -31,10 +31,10 @@ export const devSessionConfig: SessionConfig = {
 
 // Production configuration
 export const prodSessionConfig: SessionConfig = {
-  sessionTimeoutMs: 30 * 60 * 1000,   // 30 minutes
-  warningTimeMs: 5 * 60 * 1000,       // 5 minutes warning
-  refreshBufferMs: 10 * 60 * 1000,    // Refresh 10 minutes before expiry
-  refreshIntervalMs: 5 * 60 * 1000,   // Check every 5 minutes
+  sessionTimeoutMs: 15 * 60 * 1000,   // 15 minutes
+  warningTimeMs: 2 * 60 * 1000,       // 2 minutes warning
+  refreshBufferMs: 5 * 60 * 1000,     // Refresh 5 minutes before expiry
+  refreshIntervalMs: 2 * 60 * 1000,   // Check every 2 minutes
   maxSessionDurationMs: 7 * 24 * 60 * 60 * 1000, // 7 days
   showSessionStatus: true,
   autoRefresh: true,

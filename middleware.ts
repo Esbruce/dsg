@@ -3,7 +3,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
 
-  const { pathname } = request.nextUrl
+  const { pathname, searchParams } = request.nextUrl
 
   // Allow public access to /confirm and /error
   if (
@@ -11,6 +11,14 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/error') ||
     pathname.startsWith('/api/stripe/webhook')
   ) {
+    return NextResponse.next()
+  }
+
+  // Skip session validation for checkout redirects to prevent sign-out issues
+  // When Stripe redirects back to our app, cookies might be temporarily unavailable
+  // causing the middleware to think the user is not authenticated
+  if (searchParams.has('checkout')) {
+    console.log('🔄 Checkout redirect detected, skipping session validation');
     return NextResponse.next()
   }
 

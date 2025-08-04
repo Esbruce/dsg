@@ -41,9 +41,13 @@ export async function updateSession(request: NextRequest) {
   // Check for session timeout or authentication errors
   if (authError) {
     console.error('Auth error in middleware:', authError)
-    // Clear invalid session cookies
-    supabaseResponse.cookies.delete('sb-access-token')
-    supabaseResponse.cookies.delete('sb-refresh-token')
+    
+    // Only clear cookies if it's a genuine auth error, not a temporary redirect issue
+    // This prevents clearing cookies during Stripe redirects
+    if (authError.message !== 'Auth session missing!') {
+      supabaseResponse.cookies.delete('sb-access-token')
+      supabaseResponse.cookies.delete('sb-refresh-token')
+    }
   }
 
   // Only protect specific routes that require authentication
@@ -58,19 +62,27 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Check if user session is expired
+  // Check if user session is expired (15-minute timeout)
   if (user) {
     const session = await supabase.auth.getSession()
     if (session.data.session) {
       const expiresAt = session.data.session.expires_at
       const now = Math.floor(Date.now() / 1000)
       
-      // If session expires in less than 5 minutes, refresh it
-      if (expiresAt && (expiresAt - now) < 300) {
+      // 15 minutes = 900 seconds
+      const sessionTimeout = 900
+      
+      // If session expires in less than 15 minutes, refresh it
+      if (expiresAt && (expiresAt - now) < sessionTimeout) {
         try {
+          console.log('🔄 Session expiring soon, refreshing...');
           await supabase.auth.refreshSession()
         } catch (error) {
           console.error('Session refresh error in middleware:', error)
+          
+          // If refresh fails, clear the session (user will need to log in again)
+          supabaseResponse.cookies.delete('sb-access-token')
+          supabaseResponse.cookies.delete('sb-refresh-token')
         }
       }
     }
