@@ -1,12 +1,14 @@
 'use client'
 
 import React, { createContext, useContext, useState } from 'react'
+import { useRouter } from 'next/navigation';
 import PhoneInput from './PhoneInput';
 import CodeInput from './CodeInput';
 import SuccessMessage from './SuccessMessage';
 import TurnstileCaptcha from './TurnstileCaptcha';
 import { otpClientService, useOTPState, useOTPTimers } from '@/lib/auth/otp-client';
 import { createUserWithReferral } from '@/lib/auth/referral-client';
+import { useRequestIntent } from '@/lib/hooks/useRequestIntent';
 
 // Context for managing modal state
 interface LoginModalContextType {
@@ -64,6 +66,8 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const [captchaToken, setCaptchaToken] = useState<string>("");
   const [captchaError, setCaptchaError] = useState<string>("");
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const router = useRouter();
+  const { getRequestIntent, clearRequestIntent } = useRequestIntent();
   
   // Component mounted
   React.useEffect(() => {
@@ -157,10 +161,22 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
           onAuthSuccess();
         }
         
-        // Close modal - no page reload needed
-        setTimeout(() => {
-          if (onClose) onClose();
-        }, 1000);
+        // Check for stored request intent and redirect if needed
+        const intent = getRequestIntent();
+        if (intent) {
+          // Clear the intent first
+          clearRequestIntent();
+          // Redirect to the intended page
+          setTimeout(() => {
+            router.push(intent.path);
+            if (onClose) onClose();
+          }, 1000);
+        } else {
+          // Close modal - no page reload needed
+          setTimeout(() => {
+            if (onClose) onClose();
+          }, 1000);
+        }
       } else if (result.error?.includes('Invalid OTP') || result.error?.includes('Invalid token')) {
         // Handle specific OTP errors
         updateOTPState({ 

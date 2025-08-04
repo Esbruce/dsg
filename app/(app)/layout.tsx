@@ -8,6 +8,7 @@ import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
 import { LoginModalProvider } from "../components/auth";
 import { SessionTimeoutWarning } from "../components/auth/SessionTimeoutWarning";
 import { processReferralUUIDFromURL } from "../../lib/auth/referral-utils";
+import { useRequestIntent } from "../../lib/hooks/useRequestIntent";
 
 // Enhanced context interface
 interface UserDataContextType {
@@ -46,6 +47,7 @@ export default function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { clearRequestIntent } = useRequestIntent();
   // User data states (keep existing pattern for animations)
   const [usageCount, setUsageCount] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
@@ -236,6 +238,8 @@ export default function AppLayout({
         setUsageCount(0);
         setIsPaid(false);
         setIsLoading(false);
+        // Clear any stored request intent on logout
+        clearRequestIntent();
       } else if (event === 'SIGNED_IN' && session) {
         // Set authentication state immediately
         setIsAuthenticated(true);

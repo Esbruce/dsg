@@ -1,10 +1,15 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 import { logout } from "@/app/login/actions";
 
 export default function SideNav() {
+  const router = useRouter();
+  
   const handleLogout = async () => {
     try {
       await logout();
+      // Redirect to home page after logout
+      router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }

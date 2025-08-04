@@ -5,6 +5,7 @@ import { logout } from "@/app/login/actions";
 import { useRouter } from "next/navigation";
 import { useUserData } from "@/app/(app)/layout";
 import { useLoginModal } from "../auth/LoginModal";
+import { useRequestIntent } from "@/lib/hooks/useRequestIntent";
 import { formatUKPhoneForDisplay, normalizeUKPhoneNumber } from "@/lib/utils/phone";
 
 export default function Header() {
@@ -15,6 +16,7 @@ export default function Header() {
   // Use context data instead of fetching independently
   const { userIdentifier, isPaid, isLoading, isAuthenticated, refreshUserData } = useUserData();
   const { showInlineLoginModal, hideInlineLoginModal } = useLoginModal();
+  const { setRequestIntent } = useRequestIntent();
   
   // Format the user identifier for display (email or phone)
   const displayUserIdentifier = React.useMemo(() => {
@@ -63,6 +65,8 @@ export default function Header() {
       setIsDropdownOpen(false);
       // Refresh user data to update authentication state
       await refreshUserData();
+      // Redirect to home page after logout
+      router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -87,7 +91,15 @@ export default function Header() {
           </button>
 
           <button 
-            onClick={() => isAuthenticated ? router.push('/billing') : showInlineLoginModal()}
+            onClick={() => {
+              if (isAuthenticated) {
+                router.push('/billing');
+              } else {
+                // Store the billing intent before showing login modal
+                setRequestIntent('/billing');
+                showInlineLoginModal();
+              }
+            }}
             className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium"
           >
             Billing
