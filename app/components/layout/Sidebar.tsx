@@ -14,6 +14,7 @@ type SidebarProps = {
   isPaid: boolean;
   onGoUnlimited: () => void;
   isAuthenticated: boolean;
+  isLoading?: boolean;
 };
 
 export default function Sidebar({ 
@@ -24,8 +25,10 @@ export default function Sidebar({
   inviteLinkCopied,
   isPaid,
   onGoUnlimited,
-  isAuthenticated
+  isAuthenticated,
+  isLoading = false
 }: SidebarProps) {
+  
   return (
     <aside className="w-80 h-full bg-[var(--color-bg-4)] border-r border-[var(--color-neutral-300)] flex flex-col">
       {/* Branding */}
@@ -50,13 +53,17 @@ export default function Sidebar({
           isPaid={isPaid}
           onGoUnlimited={onGoUnlimited}
           isAuthenticated={isAuthenticated}
+          isLoading={isLoading}
         />
 
-        {/* <Invite 
-          inviteLink={inviteLink}
-          onCopyInviteLink={onCopyInviteLink}
-          inviteLinkCopied={inviteLinkCopied}
-        /> */}
+        {/* Only show Invite widget for authenticated users */}
+        {isAuthenticated && (
+          <Invite 
+            inviteLink={inviteLink}
+            onCopyInviteLink={onCopyInviteLink}
+            inviteLinkCopied={inviteLinkCopied}
+          />
+        )}
       </div>
     </aside>
   );

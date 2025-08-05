@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { SubscriptionData } from "../../../lib/types/billing";
+import { useReferralDiscount } from "@/lib/hooks/useReferralDiscount";
 
 interface SubscriptionStatusProps {
   subscriptionData: SubscriptionData | null;
@@ -12,6 +13,8 @@ const SubscriptionStatus = React.memo(({
   subscriptionData, 
   loadingSubscription 
 }: SubscriptionStatusProps) => {
+  const { hasDiscount, discountPercentage, isLoading: discountLoading } = useReferralDiscount();
+
   const formatPrice = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -27,8 +30,35 @@ const SubscriptionStatus = React.memo(({
     });
   };
 
+  // Calculate the correct price to display
+  const getDisplayPrice = () => {
+    if (!subscriptionData) return null;
+    
+    const originalPrice = subscriptionData.price || 299; // £2.99 in cents
+    const originalPriceGBP = originalPrice / 100; // Convert to pounds
+    
+    if (hasDiscount && discountPercentage > 0) {
+      const discountedPrice = originalPriceGBP * (1 - discountPercentage / 100);
+      return {
+        displayPrice: discountedPrice,
+        originalPrice: originalPriceGBP,
+        hasDiscount: true,
+        discountPercentage
+      };
+    }
+    
+    return {
+      displayPrice: originalPriceGBP,
+      originalPrice: originalPriceGBP,
+      hasDiscount: false,
+      discountPercentage: 0
+    };
+  };
+
+  const priceInfo = getDisplayPrice();
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[var(--color-neutral-200)] p-6">
+    <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-900">Current Plan</h2>
         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -40,19 +70,41 @@ const SubscriptionStatus = React.memo(({
         </div>
       </div>
 
-      {loadingSubscription ? (
+      {loadingSubscription || discountLoading ? (
         <div className="text-center py-4">
           <div className="w-6 h-6 border-2 border-gray-300 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-2"></div>
           <p className="text-gray-600">Loading subscription details...</p>
         </div>
-      ) : subscriptionData ? (
+      ) : subscriptionData && priceInfo ? (
         <>
+          {/* Discount Badge */}
+          {priceInfo.hasDiscount && (
+            <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              {priceInfo.discountPercentage}% Referral Discount Applied!
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <div className="text-3xl font-bold text-gray-900">
-                {formatPrice(subscriptionData.price || 299, subscriptionData.currency || 'gbp')}
+                {priceInfo.hasDiscount ? (
+                  <div className="flex items-center gap-2">
+                    <span>£{priceInfo.displayPrice.toFixed(2)}</span>
+                    <span className="text-lg text-gray-500 line-through">£{priceInfo.originalPrice.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <span>£{priceInfo.displayPrice.toFixed(2)}</span>
+                )}
               </div>
               <div className="text-sm text-gray-600">per {subscriptionData.interval || 'month'}</div>
+              {priceInfo.hasDiscount && (
+                <div className="text-sm text-green-600 font-medium mt-1">
+                  Save £{(priceInfo.originalPrice - priceInfo.displayPrice).toFixed(2)}/month!
+                </div>
+              )}
             </div>
 
             <div>

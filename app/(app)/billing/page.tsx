@@ -9,7 +9,7 @@ import { SubscriptionData } from "../../../lib/types/billing";
 
 // Components
 import BillingHeader from "../../components/billing/BillingHeader";
-import { BillingContentSkeleton } from "../../components/billing/BillingSkeleton";
+import BillingSkeleton from "../../components/billing/BillingSkeleton";
 import ErrorState from "../../components/billing/ErrorState";
 import UpgradeCard from "../../components/billing/UpgradeCard";
 import SubscriptionStatus from "../../components/billing/SubscriptionStatus";
@@ -161,7 +161,7 @@ export default function BillingPage() {
         <BillingHeader />
 
         {isLoading ? (
-          <BillingContentSkeleton />
+          <BillingSkeleton />
         ) : !isPaid ? (
           <div className="space-y-6">
             <UpgradeCard onUpgrade={handleUpgrade} />
@@ -174,7 +174,10 @@ export default function BillingPage() {
               loadingSubscription={loadingSubscription}
             />
 
-            <PaymentMethod subscriptionData={subscriptionData} />
+            <PaymentMethod 
+              subscriptionData={subscriptionData} 
+              loadingSubscription={loadingSubscription}
+            />
 
             <BillingActions
               subscriptionData={subscriptionData}

@@ -59,7 +59,7 @@ export default function AppLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const maxUsage = 3;
-  const inviteLink = "https://dsg.com/invite/user123"; // This should be dynamic based on user
+  const [inviteLink, setInviteLink] = useState<string>("");
 
   // Enhanced fetch user data function with performance optimizations
   const fetchUserData = useCallback(async () => {
@@ -90,9 +90,15 @@ export default function AppLayout({
       if (!user) {
         setIsAuthenticated(false);
         setUserEmail(null);
+        setUserPhone(null);
+        setUserIdentifier(null);
+        setUsageCount(0);
+        setIsPaid(false);
+        setInviteLink("");
         setIsLoading(false);
         return;
       }
+      
       setIsAuthenticated(true);
       setUserEmail(user.email || null);
       setUserPhone(user.phone || null);
@@ -100,6 +106,26 @@ export default function AppLayout({
       // Set user identifier for display (prefer email, fallback to phone)
       const identifier = user.email || user.phone || null;
       setUserIdentifier(identifier);
+
+      // Generate invite link for authenticated user
+      try {
+        const referralRes = await fetch("/api/referrals/data", {
+          method: "GET",
+          credentials: "include"
+        });
+        
+        if (referralRes.ok) {
+          const referralData = await referralRes.json();
+          setInviteLink(referralData.data?.referralLink || "");
+        } else {
+          // Fallback to basic invite link if referral data fails
+          setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
+        }
+      } catch (error) {
+        console.error('Error fetching referral data:', error);
+        // Fallback to basic invite link
+        setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
+      }
 
       // Handle status result
       if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
@@ -111,6 +137,11 @@ export default function AppLayout({
           setUsageCount(0);
           setIsPaid(false);
         }
+      } else if (statusRes.status === 'fulfilled' && statusRes.value.status === 401) {
+        // Handle 401 errors gracefully - user might not be fully authenticated yet
+        console.log('User status returned 401 - user may not be fully authenticated yet');
+        setUsageCount(0);
+        setIsPaid(false);
       } else {
         
         // Check if the failure is due to user not existing in the database
@@ -138,7 +169,8 @@ export default function AppLayout({
                   });
                   
                   if (createUserRes.ok) {
-                    // Retry fetching user status
+                    console.log('✅ Created user record in database');
+                    // Retry fetching user status after creating the record
                     const retryStatusRes = await fetch("/api/user/status", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
@@ -147,44 +179,48 @@ export default function AppLayout({
                     });
                     
                     if (retryStatusRes.ok) {
-                      const { user: userStatus } = await retryStatusRes.json();
-                      if (userStatus) {
-                        setUsageCount(userStatus.daily_usage_count || 0);
-                        setIsPaid(userStatus.is_paid || false);
+                      const { user: retryUserStatus } = await retryStatusRes.json();
+                      if (retryUserStatus) {
+                        setUsageCount(retryUserStatus.daily_usage_count || 0);
+                        setIsPaid(retryUserStatus.is_paid || false);
                       }
                     }
                   } else {
-                    setUsageCount(0);
-                    setIsPaid(false);
+                    console.error('❌ Failed to create user record:', createUserRes.status);
                   }
                 } catch (createError) {
-                  setUsageCount(0);
-                  setIsPaid(false);
+                  console.error('❌ Error creating user record:', createError);
                 }
               } else {
+                console.log('✅ User record exists, but status fetch failed');
                 setUsageCount(0);
                 setIsPaid(false);
               }
-            } else {
-              setUsageCount(0);
-              setIsPaid(false);
             }
           } catch (checkError) {
+            console.error('❌ Error checking user existence:', checkError);
             setUsageCount(0);
             setIsPaid(false);
           }
         } else {
+          console.error('❌ User status fetch failed:', statusRes.status === 'rejected' ? statusRes.reason : statusRes.value.status);
           setUsageCount(0);
           setIsPaid(false);
         }
       }
     } catch (error) {
+      console.error('❌ Error in fetchUserData:', error);
+      setIsAuthenticated(false);
+      setUserEmail(null);
+      setUserPhone(null);
+      setUserIdentifier(null);
       setUsageCount(0);
       setIsPaid(false);
+      setInviteLink("");
     } finally {
       setIsLoading(false);
     }
-  }, []); // Empty dependency array since this function doesn't depend on any state
+  }, []);
 
   // Simple refresh function without polling
   const refreshUserData = useCallback(async () => {
@@ -230,6 +266,8 @@ export default function AppLayout({
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
+      console.log('Auth state change:', event, session ? 'session exists' : 'no session');
+      
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUserEmail(null);
@@ -250,13 +288,22 @@ export default function AppLayout({
         const identifier = session.user.email || session.user.phone || null;
         setUserIdentifier(identifier);
         
-        // Add a small delay to ensure session is fully established
+        // Add a longer delay to ensure session is fully established and cookies are set
         setTimeout(async () => {
-          await fetchUserData();
-        }, 100);
+          try {
+            await fetchUserData();
+          } catch (error) {
+            console.error('Error fetching user data after sign in:', error);
+            // Don't fail the auth flow if user data fetch fails
+          }
+        }, 500);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Refresh user data when token is refreshed
-        await fetchUserData();
+        try {
+          await fetchUserData();
+        } catch (error) {
+          console.error('Error fetching user data after token refresh:', error);
+        }
       }
     });
 
@@ -331,6 +378,7 @@ export default function AppLayout({
             isPaid={displayIsPaid}
             onGoUnlimited={handleGoUnlimited}
             isAuthenticated={isAuthenticated}
+            isLoading={isLoading}
           />
 
           {/* Main Content Area - Takes remaining space */}

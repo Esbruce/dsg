@@ -19,6 +19,7 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmNoPII, setConfirmNoPII] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+  const [isAuthProcessing, setIsAuthProcessing] = useState(false);
 
   // Get URL search params for checkout success handling
   const searchParams = useSearchParams();
@@ -40,7 +41,7 @@ export default function Home() {
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   
   // Get data and functions from context
-  const { refreshUserData, isAuthenticated, isPaid } = useUserData();
+  const { refreshUserData, isAuthenticated, isPaid, isLoading } = useUserData();
   const { showInlineLoginModal, isInlineLoginModalOpen, hideInlineLoginModal } = useLoginModal();
 
   // Handle checkout success - refresh user data and show success message
@@ -90,15 +91,29 @@ export default function Home() {
           setMedicalNotes(currentNotes);
         }
         
-        // Small delay to ensure UI updates and state propagates
-        setTimeout(() => {
-          handleProcess();
-        }, 500);
+        // Show auth processing state
+        setIsAuthProcessing(true);
+        
+        // Wait for user data to be fully loaded before processing
+        const waitForUserData = async () => {
+          // Wait until user data is no longer loading
+          while (isLoading) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+          // Additional small delay to ensure state propagation
+          setTimeout(() => {
+            setIsAuthProcessing(false);
+            handleProcess();
+          }, 200);
+        };
+        
+        waitForUserData();
       } else {
         console.log('📝 No medical notes found for auto-processing');
       }
     }
-  }, [isAuthenticated, isInlineLoginModalOpen]);
+  }, [isAuthenticated, isInlineLoginModalOpen, isLoading]);
 
   const handleProcess = useCallback(async () => {
     if (!medicalNotes.trim()) {
@@ -111,6 +126,12 @@ export default function Home() {
       // Save medical notes to localStorage before showing login modal
       localStorage.setItem('temp_medical_notes', medicalNotes);
       showInlineLoginModal();
+      return;
+    }
+
+    // Ensure user data is fully loaded before processing
+    if (isLoading) {
+      console.log('⏳ Waiting for user data to load before processing...');
       return;
     }
 
@@ -172,14 +193,31 @@ export default function Home() {
       setShowOutput(true);
 
       // 5. Refresh user data to update usage count in sidebar
-      refreshUserData();
+      await refreshUserData();
 
     } catch (err) {
-      alert("Unexpected error: " + (err as Error).message);
+      console.error('❌ Processing error:', err);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Status check failed')) {
+          errorMessage = "Unable to verify your account status. Please refresh the page and try again.";
+        } else if (err.message.includes('Summary generation failed')) {
+          errorMessage = "Failed to generate summary. Please check your medical notes and try again.";
+        } else if (err.message.includes('Invalid response')) {
+          errorMessage = "Received an invalid response from the server. Please try again.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsProcessing(false);
     }
-  }, [medicalNotes, isAuthenticated, showInlineLoginModal, refreshUserData]);
+  }, [medicalNotes, isAuthenticated, showInlineLoginModal, refreshUserData, isLoading]);
 
   const handleClear = () => {
     setMedicalNotes("");
@@ -228,7 +266,24 @@ export default function Home() {
         throw new Error("No checkout URL received");
       }
     } catch (err) {
-      alert("Error redirecting to checkout: " + (err as Error).message);
+      console.error('❌ Checkout error:', err);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = "Unable to start checkout process. Please try again.";
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Checkout failed: 401')) {
+          errorMessage = "Please sign in to upgrade your account.";
+        } else if (err.message.includes('Checkout failed: 500')) {
+          errorMessage = "Checkout service is temporarily unavailable. Please try again later.";
+        } else if (err.message.includes('No checkout URL received')) {
+          errorMessage = "Unable to create checkout session. Please try again.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -252,11 +307,11 @@ export default function Home() {
       )}
 
       {/* Input Section or Login Modal - Only visible when not processing and not showing output */}
-      {!isProcessing && !showOutput && (
+      {!isProcessing && !showOutput && !isAuthProcessing && (
         <section className="flex-1">
           {isInlineLoginModalOpen ? (
             <div className="flex items-center justify-center h-full">
-              <div className="bg-white rounded-xl shadow-lg border border-[var(--color-neutral-200)] max-w-md w-full p-8">
+              <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] max-w-md w-full p-8">
                         <LoginModal
           onClose={hideInlineLoginModal}
         />
@@ -276,6 +331,19 @@ export default function Home() {
         </section>
       )}
 
+      {/* Auth Processing State - Only visible when processing authentication */}
+      {isAuthProcessing && (
+        <section className="w-full h-full flex-1 flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
+              <p className="text-lg font-medium text-gray-700">Loading your account...</p>
+              <p className="text-sm text-gray-500 mt-2">Preparing to generate your summary</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Processing State - Only visible when processing */}
       {isProcessing && (
         <section className=" w-full h-full flex-1 flex items-center justify-center">
@@ -288,8 +356,8 @@ export default function Home() {
       {/* Output Section - Only visible when showing output and not processing */}
       {showOutput && !isProcessing && (
         <section className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-auto px-6 pb-8">
-            <div className="max-w-6xl mx-auto">
+          <div className="flex-1 overflow-auto px-4 pb-4">
+            <div className="w-full max-w-7xl mx-auto">
               <OutputSection
                 summary={summary}
                 dischargePlan={dischargePlan}

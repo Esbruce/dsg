@@ -112,6 +112,13 @@ export default function TurnstileCaptcha({
         return
       }
 
+      // Check if we're already verifying
+      if (isVerifying) {
+        console.log('🔍 TurnstileCaptcha: Already verifying, skipping render')
+        setDebugInfo(prev => prev + ' | Already verifying')
+        return
+      }
+
       // Clear container first
       if (containerRef.current) {
         containerRef.current.innerHTML = ''
@@ -133,7 +140,10 @@ export default function TurnstileCaptcha({
             console.log('✅ Turnstile CAPTCHA verified, token length:', token.length)
             setDebugInfo(prev => prev + ' | Verified')
             setIsVerifying(true)
-            onVerify(token)
+            // Add a small delay to prevent race conditions
+            setTimeout(() => {
+              onVerify(token)
+            }, 100)
           },
           'error-callback': () => {
             if (isVerifying) {
@@ -143,7 +153,10 @@ export default function TurnstileCaptcha({
             console.log('❌ Turnstile CAPTCHA error')
             setDebugInfo(prev => prev + ' | Error')
             setIsVerifying(true)
-            onError('CAPTCHA verification failed. Please try again.')
+            // Add a small delay to prevent race conditions
+            setTimeout(() => {
+              onError('CAPTCHA verification failed. Please try again.')
+            }, 100)
           },
           'expired-callback': () => {
             console.log('⏰ Turnstile CAPTCHA expired')
@@ -170,7 +183,8 @@ export default function TurnstileCaptcha({
     // Cleanup function
     return () => {
       console.log('🔍 TurnstileCaptcha: Cleaning up...')
-      if (widgetIdRef.current && window.turnstile) {
+      // Don't reset if we're currently verifying
+      if (widgetIdRef.current && window.turnstile && !isVerifying) {
         try {
           window.turnstile.reset(widgetIdRef.current)
           console.log('✅ TurnstileCaptcha: Widget reset successfully')

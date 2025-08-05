@@ -66,6 +66,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const [captchaToken, setCaptchaToken] = useState<string>("");
   const [captchaError, setCaptchaError] = useState<string>("");
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaKey, setCaptchaKey] = useState(0);
   const router = useRouter();
   const { getRequestIntent, clearRequestIntent } = useRequestIntent();
   
@@ -102,6 +103,12 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     setCaptchaError(error);
     setCaptchaToken("");
     setIsProcessing(false);
+    // Reset CAPTCHA state to allow retry
+    setShowCaptcha(false);
+    setTimeout(() => {
+      setCaptchaKey(prev => prev + 1);
+      setShowCaptcha(true);
+    }, 100);
   };
 
   const sendOTPWithCaptcha = async (token: string) => {
@@ -115,11 +122,20 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         updateOTPState({ otpSent: true });
         startTimers();
         setShowCaptcha(false);
+        setCaptchaError(""); // Clear any CAPTCHA errors
       } else {
-        setError(result.error || "Failed to send OTP");
+        // Handle specific error types
+        if (result.error?.includes('Rate limit') || result.error?.includes('429')) {
+          setError("Too many attempts. Please wait a moment before trying again.");
+          // Reset CAPTCHA for rate limit errors
+          setCaptchaKey(prev => prev + 1);
+        } else {
+          setError(result.error || "Failed to send OTP");
+        }
       }
     } catch (error) {
-      setError("An unexpected error occurred");
+      console.error('Error sending OTP:', error);
+      setError("An unexpected error occurred. Please try again.");
     }
 
     setIsProcessing(false);
@@ -131,7 +147,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     // For minimal implementation, always show CAPTCHA
     // In production, you'd check risk factors here
     setShowCaptcha(true);
-    setIsProcessing(true);
+    setIsProcessing(false); // Don't set processing until CAPTCHA is verified
   };
 
   const handleOTPSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,7 +179,11 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         
         // Check for stored request intent and redirect if needed
         const intent = getRequestIntent();
-        if (intent) {
+        const currentPath = window.location.pathname;
+        
+        // Only redirect if there's a stored intent AND it's different from current path
+        // AND it's not the home page (to avoid unnecessary redirects)
+        if (intent && intent.path !== currentPath && intent.path !== '/') {
           // Clear the intent first
           clearRequestIntent();
           // Redirect to the intended page
@@ -172,7 +192,8 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
             if (onClose) onClose();
           }, 1000);
         } else {
-          // Close modal - no page reload needed
+          // Clear any stored intent and close modal - no page reload needed
+          clearRequestIntent();
           setTimeout(() => {
             if (onClose) onClose();
           }, 1000);
@@ -245,7 +266,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
                   Please complete the security check below to send your verification code
                 </p>
                 <TurnstileCaptcha
-                  key={`turnstile-captcha-${showCaptcha ? 'active' : 'inactive'}`}
+                  key={`turnstile-captcha-${captchaKey}`}
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
                   onVerify={handleCaptchaVerify}
                   onError={handleCaptchaError}
