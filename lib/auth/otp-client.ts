@@ -18,9 +18,9 @@ export interface OTPState {
 }
 
 export interface OTPActions {
-  sendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
-  verifyOTP: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number }>
-  resendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }>
+  sendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }>
+  verifyOTP: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }>
+  resendOTP: (phoneNumber: string) => Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }>
   resetOTPState: () => void
 }
 
@@ -123,7 +123,7 @@ export class OTPClientService {
    * @param captchaToken - Optional CAPTCHA token for verification
    * @returns Promise with success status and rate limiting info
    */
-  async sendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+  async sendOTP(phoneNumber: string, captchaToken?: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }> {
     try {
       // Validate phone number first
       const validation = validateUKPhoneNumber(phoneNumber)
@@ -161,7 +161,9 @@ export class OTPClientService {
       return { 
         success: true,
         remaining: result.remaining || 0,
-        resetTime: result.resetTime || 0
+        resetTime: result.resetTime || 0,
+        rateLimited: result.rateLimited || false,
+        timeUntilReset: result.timeUntilReset || 0
       }
     } catch (error) {
       console.error('❌ OTP Client: Send OTP unexpected error:', error)
@@ -178,7 +180,7 @@ export class OTPClientService {
    * @param otp - The 6-digit OTP code to verify
    * @returns Promise with verification result and session info
    */
-  async verifyOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number }> {
+  async verifyOTP(phoneNumber: string, otp: string): Promise<{ success: boolean; error?: string; session?: Session | null; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }> {
     try {
       // Validate phone number first
       const phoneValidation = validateUKPhoneNumber(phoneNumber)
@@ -200,7 +202,9 @@ export class OTPClientService {
         error: result.error,
         session: result.session,
         remaining: 0,
-        resetTime: 0
+        resetTime: 0,
+        rateLimited: result.rateLimited || false,
+        timeUntilReset: result.timeUntilReset || 0
       }
     } catch (error) {
       console.error('❌ OTP Client: Verify OTP unexpected error:', error)
@@ -216,7 +220,7 @@ export class OTPClientService {
    * @param phoneNumber - The phone number to resend OTP to
    * @returns Promise with resend result and rate limiting info
    */
-  async resendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number }> {
+  async resendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string; remaining?: number; resetTime?: number; rateLimited?: boolean; timeUntilReset?: number }> {
     try {
       // Validate phone number first
       const validation = validateUKPhoneNumber(phoneNumber)
@@ -235,7 +239,9 @@ export class OTPClientService {
         success: result.success,
         error: result.error,
         remaining: 0,
-        resetTime: 0
+        resetTime: 0,
+        rateLimited: result.rateLimited || false,
+        timeUntilReset: result.timeUntilReset || 0
       }
     } catch (error) {
       console.error('❌ OTP Client: Resend OTP unexpected error:', error)

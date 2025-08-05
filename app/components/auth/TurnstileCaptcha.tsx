@@ -28,6 +28,10 @@ declare global {
   }
 }
 
+// Global state to prevent multiple script loads
+let scriptLoading = false
+let scriptLoaded = false
+
 export default function TurnstileCaptcha({ 
   onVerify, 
   onError, 
@@ -37,9 +41,9 @@ export default function TurnstileCaptcha({
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string>('')
   const isRenderedRef = useRef<boolean>(false)
-  const scriptLoadedRef = useRef<boolean>(false)
   const [debugInfo, setDebugInfo] = useState<string>('')
   const [isVerifying, setIsVerifying] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   useEffect(() => {
     console.log('🔍 TurnstileCaptcha: Component mounted')
@@ -54,9 +58,11 @@ export default function TurnstileCaptcha({
     }
     
     // Load Turnstile script if not already loaded
-    if (!window.turnstile && !scriptLoadedRef.current) {
+    if (!window.turnstile && !scriptLoaded && !scriptLoading) {
       console.log('🔍 TurnstileCaptcha: Loading Turnstile script...')
       setDebugInfo(prev => prev + ' | Loading script')
+      setIsLoading(true)
+      scriptLoading = true
       
       const script = document.createElement('script')
       script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
@@ -67,13 +73,17 @@ export default function TurnstileCaptcha({
       script.onload = () => {
         console.log('🔍 TurnstileCaptcha: Script loaded successfully')
         setDebugInfo(prev => prev + ' | Script loaded')
-        scriptLoadedRef.current = true
+        scriptLoaded = true
+        scriptLoading = false
+        setIsLoading(false)
         renderCaptcha()
       }
       
       script.onerror = () => {
         console.error('❌ TurnstileCaptcha: Failed to load script')
         setDebugInfo(prev => prev + ' | Script failed')
+        scriptLoading = false
+        setIsLoading(false)
         onError('Failed to load CAPTCHA script')
       }
     } else if (window.turnstile) {
@@ -195,6 +205,7 @@ export default function TurnstileCaptcha({
       isRenderedRef.current = false
       widgetIdRef.current = ''
       setIsVerifying(false)
+      setIsLoading(false)
     }
   }, [siteKey, onVerify, onError]) // Added all dependencies
 
@@ -205,6 +216,12 @@ export default function TurnstileCaptcha({
         className="turnstile-container"
         data-testid="turnstile-captcha"
       />
+      {/* Show loading state */}
+      {isLoading && (
+        <div className="mt-2 text-sm text-gray-500">
+          Loading CAPTCHA...
+        </div>
+      )}
       {/* Debug info - remove in production */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-2 text-xs text-gray-500">

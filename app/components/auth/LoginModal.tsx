@@ -125,10 +125,15 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         setCaptchaError(""); // Clear any CAPTCHA errors
       } else {
         // Handle specific error types
-        if (result.error?.includes('Rate limit') || result.error?.includes('429')) {
-          setError("Too many attempts. Please wait a moment before trying again.");
+        if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
+          const timeUntilReset = result.timeUntilReset || 10; // Default to 10 minutes if not provided
+          setError(`Too many attempts. Please wait ${timeUntilReset} minutes before trying again.`);
           // Reset CAPTCHA for rate limit errors
           setCaptchaKey(prev => prev + 1);
+          // Disable the form for the duration
+          setTimeout(() => {
+            setError("");
+          }, timeUntilReset * 60 * 1000); // Clear error after time period
         } else {
           setError(result.error || "Failed to send OTP");
         }
@@ -204,6 +209,13 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
           otpError: "Invalid verification code. Please check and try again.",
           otpProcessing: false 
         });
+      } else if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
+        // Handle rate limiting specifically
+        const timeUntilReset = result.timeUntilReset || 15; // Default to 15 minutes if not provided
+        updateOTPState({ 
+          otpError: `Too many verification attempts. Please wait ${timeUntilReset} minutes before trying again.`,
+          otpProcessing: false 
+        });
       } else {
         updateOTPState({ 
           otpError: result.error || "Verification failed",
@@ -228,7 +240,15 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     if (result.success) {
       startTimers();
     } else {
-      updateOTPState({ otpResendError: result.error || "Failed to resend code" });
+      // Handle rate limiting specifically
+      if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
+        const timeUntilReset = result.timeUntilReset || 3; // Default to 3 minutes if not provided
+        updateOTPState({ 
+          otpResendError: `Too many resend attempts. Please wait ${timeUntilReset} minutes before trying again.` 
+        });
+      } else {
+        updateOTPState({ otpResendError: result.error || "Failed to resend code" });
+      }
     }
   };
 

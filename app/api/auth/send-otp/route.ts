@@ -18,8 +18,16 @@ export async function POST(req: NextRequest) {
     // Check rate limit
     const rateLimitResult = await otpRateLimiter.check(req, phoneNumber)
     if (!rateLimitResult.allowed) {
+      const resetTime = new Date(rateLimitResult.resetTime)
+      const timeUntilReset = Math.ceil((resetTime.getTime() - Date.now()) / 1000 / 60) // minutes
+      
       return NextResponse.json(
-        { error: rateLimitResult.error || 'Rate limit exceeded' },
+        { 
+          error: `Too many attempts. Please wait ${timeUntilReset} minutes before trying again.`,
+          rateLimited: true,
+          resetTime: rateLimitResult.resetTime,
+          timeUntilReset
+        },
         { status: 429 }
       )
     }

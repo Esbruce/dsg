@@ -14,6 +14,8 @@ export interface ClientAuthResult {
   error?: string
   session?: Session | null
   isNewUser?: boolean
+  rateLimited?: boolean
+  timeUntilReset?: number
 }
 
 /**
