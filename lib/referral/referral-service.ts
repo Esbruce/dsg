@@ -26,18 +26,23 @@ export class ReferralService {
    * Get referral data for a user
    */
   async getReferralData(userId: string): Promise<ReferralData> {
+    console.log('🔍 ReferralService: Getting referral data for user:', userId);
     try {
       // Get referral link
       const referralLink = await this.getReferralLink(userId);
+      console.log('🔍 ReferralService: Generated referral link:', referralLink);
 
       // Check if user has been referred by someone
-      const { data: user } = await supabaseAdmin
+      const { data: user, error: userError } = await supabaseAdmin
         .from('users')
         .select('referred_by')
         .eq('id', userId)
         .single();
 
+      console.log('🔍 ReferralService: User data from database:', user, 'Error:', userError);
+
       const hasBeenReferred = !!user?.referred_by;
+      console.log('🔍 ReferralService: Has been referred:', hasBeenReferred);
 
       // If they have been referred, get referrer info
       let referrerInfo = undefined;
@@ -54,15 +59,19 @@ export class ReferralService {
             createdAt: referrer.created_at
           };
         }
+        console.log('🔍 ReferralService: Referrer info:', referrerInfo);
       }
 
-      return {
+      const result = {
         referralLink,
         hasBeenReferred,
         referrerInfo
       };
+      
+      console.log('🔍 ReferralService: Final referral data:', result);
+      return result;
     } catch (error) {
-      console.error('Error getting referral data:', error);
+      console.error('🔍 ReferralService: Error getting referral data:', error);
       throw new Error('Failed to get referral data');
     }
   }
@@ -102,14 +111,19 @@ export class ReferralService {
    * Get referral data for authenticated user
    */
   async getCurrentUserReferralData(): Promise<ReferralData> {
+    console.log('🔍 ReferralService: Getting current user referral data...');
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
+      console.error('🔍 ReferralService: User not authenticated:', error);
       throw new Error('User not authenticated');
     }
 
-    return this.getReferralData(user.id);
+    console.log('🔍 ReferralService: User authenticated:', user.id);
+    const referralData = await this.getReferralData(user.id);
+    console.log('🔍 ReferralService: Referral data generated:', referralData);
+    return referralData;
   }
 
   /**

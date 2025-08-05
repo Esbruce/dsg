@@ -70,7 +70,24 @@ export default function AppLayout({
       
       // Get user first (this should be fast)
       console.log('🔍 fetchUserData: Getting user from Supabase...');
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      // Add timeout to prevent hanging due to CAPTCHA interference
+      let authResult;
+      try {
+        authResult = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Supabase auth timeout')), 5000)
+          )
+        ]);
+      } catch (authTimeoutError) {
+        console.error('🔍 fetchUserData: Supabase auth timeout - likely due to CAPTCHA interference:', authTimeoutError);
+        // Set default values and continue
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: { user }, error: authError } = authResult;
       
       console.log('🔍 fetchUserData: Auth result - user:', user ? user.id : 'null', 'error:', authError?.message);
 
@@ -123,6 +140,50 @@ export default function AppLayout({
             setIsPaid(userStatus.is_paid || false);
           } else {
             console.log('🔍 fetchUserData: No user status data');
+            setUsageCount(0);
+            setIsPaid(false);
+          }
+        } else if (statusRes.status === 404) {
+          console.log('🔍 User status returned 404 - user record not found, creating...');
+          
+          // User record doesn't exist, create it
+          try {
+            const createUserRes = await fetch("/api/supabase/create-user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({}),
+            });
+            
+            if (createUserRes.ok) {
+              console.log('✅ User record created successfully');
+              // Retry fetching user status after creating the record
+              const retryStatusRes = await fetch("/api/user/status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({}),
+              });
+              
+              if (retryStatusRes.ok) {
+                const { user: retryUserStatus } = await retryStatusRes.json();
+                if (retryUserStatus) {
+                  console.log('✅ User status retry successful after creation:', retryUserStatus);
+                  setUsageCount(retryUserStatus.daily_usage_count || 0);
+                  setIsPaid(retryUserStatus.is_paid || false);
+                }
+              } else {
+                console.log('🔍 User status retry failed after creation:', retryStatusRes.status);
+                setUsageCount(0);
+                setIsPaid(false);
+              }
+            } else {
+              console.log('🔍 User creation failed:', createUserRes.status);
+              setUsageCount(0);
+              setIsPaid(false);
+            }
+          } catch (createError) {
+            console.error('🔍 User creation error:', createError);
             setUsageCount(0);
             setIsPaid(false);
           }
@@ -185,17 +246,21 @@ export default function AppLayout({
         
         if (referralRes.ok) {
           const referralData = await referralRes.json();
+          console.log('🔍 fetchUserData: Referral data received:', referralData);
           setInviteLink(referralData.data?.referralLink || "");
-          console.log('🔍 fetchUserData: Referral link set');
+          console.log('🔍 fetchUserData: Referral link set to:', referralData.data?.referralLink || "");
         } else {
           // Fallback to basic invite link if referral data fails
-          setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
-          console.log('🔍 fetchUserData: Using fallback referral link');
+          const fallbackLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`;
+          setInviteLink(fallbackLink);
+          console.log('🔍 fetchUserData: Using fallback referral link:', fallbackLink);
         }
       } catch (error) {
         console.error('🔍 fetchUserData: Error fetching referral data:', error);
         // Fallback to basic invite link
-        setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
+        const fallbackLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`;
+        setInviteLink(fallbackLink);
+        console.log('🔍 fetchUserData: Using fallback referral link due to error:', fallbackLink);
       }
       
       console.log('🔍 fetchUserData: Completed successfully');
