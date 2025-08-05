@@ -9,9 +9,22 @@ export async function POST(req: NextRequest) {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (authError) {
+            console.error('🔍 User status auth error:', authError);
+            return NextResponse.json({ 
+                error: 'Authentication failed', 
+                details: authError.message 
+            }, { status: 401 });
         }
+
+        if (!user) {
+            console.log('🔍 User status: No user found in session');
+            return NextResponse.json({ 
+                error: 'No authenticated user found' 
+            }, { status: 401 });
+        }
+
+        console.log('🔍 User status: Authenticated user:', user.id);
 
         // Use authenticated user's ID (not from request body)
         const authenticatedUserId = user.id;
@@ -22,8 +35,20 @@ export async function POST(req: NextRequest) {
             .eq('id', authenticatedUserId)
             .single();
 
-        if (userError || !userData) {
-            return NextResponse.json({ error: userError?.message || 'User not found' }, { status: 404 });
+        if (userError) {
+            console.error('🔍 User status database error:', userError);
+            return NextResponse.json({ 
+                error: userError.message || 'User not found',
+                details: 'Database query failed'
+            }, { status: 404 });
+        }
+
+        if (!userData) {
+            console.log('🔍 User status: No user data found for ID:', authenticatedUserId);
+            return NextResponse.json({ 
+                error: 'User data not found',
+                details: 'User exists but no data in users table'
+            }, { status: 404 });
         }
 
         // Apply daily reset logic (same as in generate_summary)
@@ -49,9 +74,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ user: userData });
     } catch (err: any) {
-        console.error('User status error:', err);
+        console.error('🔍 User status unexpected error:', err);
         return NextResponse.json({ 
-            error: 'Failed to fetch user status. Please try again.' 
+            error: 'Failed to fetch user status. Please try again.',
+            details: err.message
         }, { status: 500 });
     }
 }

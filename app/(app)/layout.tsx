@@ -139,74 +139,53 @@ export default function AppLayout({
         }
       } else if (statusRes.status === 'fulfilled' && statusRes.value.status === 401) {
         // Handle 401 errors gracefully - user might not be fully authenticated yet
-        console.log('User status returned 401 - user may not be fully authenticated yet');
-        setUsageCount(0);
-        setIsPaid(false);
-      } else {
+        console.log('🔍 User status returned 401 - user may not be fully authenticated yet');
+        console.log('🔍 Status response:', statusRes.value.status, statusRes.value.statusText);
         
-        // Check if the failure is due to user not existing in the database
-        if (statusRes.status === 'fulfilled' && statusRes.value.status === 404) {
-          // Check if user record exists using API endpoint
+        // Try to get more details about the error
+        try {
+          const errorData = await statusRes.value.json();
+          console.log('🔍 Error details:', errorData);
+        } catch (e) {
+          console.log('🔍 Could not parse error response');
+        }
+        
+        // Retry once after a short delay for production timing issues
+        setTimeout(async () => {
           try {
-            const checkUserRes = await fetch("/api/user/check-exists", {
+            console.log('🔍 Retrying user status after 401...');
+            const retryRes = await fetch("/api/user/status", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
               body: JSON.stringify({}),
             });
             
-            if (checkUserRes.ok) {
-              const { exists } = await checkUserRes.json();
-              
-              if (!exists) {
-                // User doesn't exist in users table, create the record
-                try {
-                  const createUserRes = await fetch("/api/supabase/create-user", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({}),
-                  });
-                  
-                  if (createUserRes.ok) {
-                    console.log('✅ Created user record in database');
-                    // Retry fetching user status after creating the record
-                    const retryStatusRes = await fetch("/api/user/status", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      credentials: "include",
-                      body: JSON.stringify({}),
-                    });
-                    
-                    if (retryStatusRes.ok) {
-                      const { user: retryUserStatus } = await retryStatusRes.json();
-                      if (retryUserStatus) {
-                        setUsageCount(retryUserStatus.daily_usage_count || 0);
-                        setIsPaid(retryUserStatus.is_paid || false);
-                      }
-                    }
-                  } else {
-                    console.error('❌ Failed to create user record:', createUserRes.status);
-                  }
-                } catch (createError) {
-                  console.error('❌ Error creating user record:', createError);
-                }
-              } else {
-                console.log('✅ User record exists, but status fetch failed');
-                setUsageCount(0);
-                setIsPaid(false);
+            if (retryRes.ok) {
+              const { user: retryUserStatus } = await retryRes.json();
+              if (retryUserStatus) {
+                console.log('✅ User status retry successful');
+                setUsageCount(retryUserStatus.daily_usage_count || 0);
+                setIsPaid(retryUserStatus.is_paid || false);
               }
+            } else {
+              console.log('🔍 User status retry also failed:', retryRes.status);
             }
-          } catch (checkError) {
-            console.error('❌ Error checking user existence:', checkError);
-            setUsageCount(0);
-            setIsPaid(false);
+          } catch (retryError) {
+            console.error('🔍 User status retry error:', retryError);
           }
-        } else {
-          console.error('❌ User status fetch failed:', statusRes.status === 'rejected' ? statusRes.reason : statusRes.value.status);
-          setUsageCount(0);
-          setIsPaid(false);
-        }
+        }, 2000); // Wait 2 seconds before retry
+        
+        setUsageCount(0);
+        setIsPaid(false);
+      } else if (statusRes.status === 'rejected') {
+        console.error('🔍 User status request failed:', statusRes.reason);
+        setUsageCount(0);
+        setIsPaid(false);
+      } else {
+        console.error('🔍 User status unexpected response:', statusRes.status, statusRes.value?.status);
+        setUsageCount(0);
+        setIsPaid(false);
       }
     } catch (error) {
       console.error('❌ Error in fetchUserData:', error);
@@ -289,14 +268,18 @@ export default function AppLayout({
         setUserIdentifier(identifier);
         
         // Add a longer delay to ensure session is fully established and cookies are set
+        // Increased delay for production to handle session propagation
         setTimeout(async () => {
           try {
+            console.log('🔄 Fetching user data after sign in...');
             await fetchUserData();
           } catch (error) {
             console.error('Error fetching user data after sign in:', error);
             // Don't fail the auth flow if user data fetch fails
+            // Set loading to false so UI doesn't get stuck
+            setIsLoading(false);
           }
-        }, 500);
+        }, 1000); // Increased from 500ms to 1000ms for production
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Refresh user data when token is refreshed
         try {
