@@ -63,10 +63,13 @@ export default function AppLayout({
 
   // Enhanced fetch user data function with performance optimizations
   const fetchUserData = useCallback(async () => {
+    console.log('🔍 fetchUserData: Starting...');
     try {
       const supabase = createClient();
+      console.log('🔍 fetchUserData: Supabase client created');
       
       // Get user and status in parallel for better performance
+      console.log('🔍 fetchUserData: Making parallel requests...');
       const [authResult, statusRes] = await Promise.allSettled([
         supabase.auth.getUser(),
         fetch("/api/user/status", {
@@ -77,8 +80,13 @@ export default function AppLayout({
         })
       ]);
 
+      console.log('🔍 fetchUserData: Parallel requests completed');
+      console.log('🔍 fetchUserData: Auth result status:', authResult.status);
+      console.log('🔍 fetchUserData: Status result status:', statusRes.status);
+
       // Handle authentication result
       if (authResult.status === 'rejected') {
+        console.error('🔍 fetchUserData: Auth result rejected:', authResult.reason);
         setIsAuthenticated(false);
         setUserEmail(null);
         setIsLoading(false);
@@ -86,8 +94,10 @@ export default function AppLayout({
       }
 
       const { data: { user } } = authResult.value;
+      console.log('🔍 fetchUserData: Auth user:', user ? user.id : 'null');
       
       if (!user) {
+        console.log('🔍 fetchUserData: No user found, clearing state');
         setIsAuthenticated(false);
         setUserEmail(null);
         setUserPhone(null);
@@ -99,6 +109,7 @@ export default function AppLayout({
         return;
       }
       
+      console.log('🔍 fetchUserData: Setting authenticated state');
       setIsAuthenticated(true);
       setUserEmail(user.email || null);
       setUserPhone(user.phone || null);
@@ -108,32 +119,41 @@ export default function AppLayout({
       setUserIdentifier(identifier);
 
       // Generate invite link for authenticated user
+      console.log('🔍 fetchUserData: Fetching referral data...');
       try {
         const referralRes = await fetch("/api/referrals/data", {
           method: "GET",
           credentials: "include"
         });
         
+        console.log('🔍 fetchUserData: Referral response status:', referralRes.status);
+        
         if (referralRes.ok) {
           const referralData = await referralRes.json();
           setInviteLink(referralData.data?.referralLink || "");
+          console.log('🔍 fetchUserData: Referral link set');
         } else {
           // Fallback to basic invite link if referral data fails
           setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
+          console.log('🔍 fetchUserData: Using fallback referral link');
         }
       } catch (error) {
-        console.error('Error fetching referral data:', error);
+        console.error('🔍 fetchUserData: Error fetching referral data:', error);
         // Fallback to basic invite link
         setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
       }
 
       // Handle status result
+      console.log('🔍 fetchUserData: Processing status result...');
       if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
+        console.log('🔍 fetchUserData: Status request successful');
         const { user: userStatus } = await statusRes.value.json();
         if (userStatus) {
+          console.log('🔍 fetchUserData: User status data:', userStatus);
           setUsageCount(userStatus.daily_usage_count || 0);
           setIsPaid(userStatus.is_paid || false);
         } else {
+          console.log('🔍 fetchUserData: No user status data');
           setUsageCount(0);
           setIsPaid(false);
         }
@@ -187,8 +207,10 @@ export default function AppLayout({
         setUsageCount(0);
         setIsPaid(false);
       }
+      
+      console.log('🔍 fetchUserData: Completed successfully');
     } catch (error) {
-      console.error('❌ Error in fetchUserData:', error);
+      console.error('🔍 fetchUserData: Unexpected error:', error);
       setIsAuthenticated(false);
       setUserEmail(null);
       setUserPhone(null);
@@ -197,6 +219,7 @@ export default function AppLayout({
       setIsPaid(false);
       setInviteLink("");
     } finally {
+      console.log('🔍 fetchUserData: Setting isLoading to false');
       setIsLoading(false);
     }
   }, []);
@@ -258,6 +281,7 @@ export default function AppLayout({
         // Clear any stored request intent on logout
         clearRequestIntent();
       } else if (event === 'SIGNED_IN' && session) {
+        console.log('🔍 SIGNED_IN event triggered with session:', session.user.id);
         // Set authentication state immediately
         setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
@@ -269,12 +293,14 @@ export default function AppLayout({
         
         // Add a longer delay to ensure session is fully established and cookies are set
         // Increased delay for production to handle session propagation
+        console.log('🔍 Setting timeout for fetchUserData...');
         setTimeout(async () => {
           try {
             console.log('🔄 Fetching user data after sign in...');
             await fetchUserData();
+            console.log('✅ fetchUserData completed successfully');
           } catch (error) {
-            console.error('Error fetching user data after sign in:', error);
+            console.error('❌ Error in fetchUserData timeout:', error);
             // Don't fail the auth flow if user data fetch fails
             // Set loading to false so UI doesn't get stuck
             setIsLoading(false);
