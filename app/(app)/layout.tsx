@@ -68,35 +68,14 @@ export default function AppLayout({
       const supabase = createClient();
       console.log('🔍 fetchUserData: Supabase client created');
       
-      // Get user and status in parallel for better performance
-      console.log('🔍 fetchUserData: Making parallel requests...');
-      const [authResult, statusRes] = await Promise.allSettled([
-        supabase.auth.getUser(),
-        fetch("/api/user/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({}),
-        })
-      ]);
-
-      console.log('🔍 fetchUserData: Parallel requests completed');
-      console.log('🔍 fetchUserData: Auth result status:', authResult.status);
-      console.log('🔍 fetchUserData: Status result status:', statusRes.status);
+      // Get user first (this should be fast)
+      console.log('🔍 fetchUserData: Getting user from Supabase...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      console.log('🔍 fetchUserData: Auth result - user:', user ? user.id : 'null', 'error:', authError?.message);
 
       // Handle authentication result
-      if (authResult.status === 'rejected') {
-        console.error('🔍 fetchUserData: Auth result rejected:', authResult.reason);
-        setIsAuthenticated(false);
-        setUserEmail(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: { user } } = authResult.value;
-      console.log('🔍 fetchUserData: Auth user:', user ? user.id : 'null');
-      
-      if (!user) {
+      if (authError || !user) {
         console.log('🔍 fetchUserData: No user found, clearing state');
         setIsAuthenticated(false);
         setUserEmail(null);
@@ -118,13 +97,89 @@ export default function AppLayout({
       const identifier = user.email || user.phone || null;
       setUserIdentifier(identifier);
 
-      // Generate invite link for authenticated user
+      // Now fetch user status with timeout
+      console.log('🔍 fetchUserData: Fetching user status...');
+      try {
+        const statusRes = await Promise.race([
+          fetch("/api/user/status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({}),
+          }),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('User status request timeout')), 10000)
+          )
+        ]) as Response;
+
+        console.log('🔍 fetchUserData: Status response received:', statusRes.status);
+        
+        if (statusRes.ok) {
+          console.log('🔍 fetchUserData: Status request successful');
+          const { user: userStatus } = await statusRes.json();
+          if (userStatus) {
+            console.log('🔍 fetchUserData: User status data:', userStatus);
+            setUsageCount(userStatus.daily_usage_count || 0);
+            setIsPaid(userStatus.is_paid || false);
+          } else {
+            console.log('🔍 fetchUserData: No user status data');
+            setUsageCount(0);
+            setIsPaid(false);
+          }
+        } else if (statusRes.status === 401) {
+          console.log('🔍 User status returned 401 - user may not be fully authenticated yet');
+          
+          // Retry once after a short delay for production timing issues
+          setTimeout(async () => {
+            try {
+              console.log('🔍 Retrying user status after 401...');
+              const retryRes = await fetch("/api/user/status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({}),
+              });
+              
+              if (retryRes.ok) {
+                const { user: retryUserStatus } = await retryRes.json();
+                if (retryUserStatus) {
+                  console.log('✅ User status retry successful');
+                  setUsageCount(retryUserStatus.daily_usage_count || 0);
+                  setIsPaid(retryUserStatus.is_paid || false);
+                }
+              } else {
+                console.log('🔍 User status retry also failed:', retryRes.status);
+              }
+            } catch (retryError) {
+              console.error('🔍 User status retry error:', retryError);
+            }
+          }, 2000);
+          
+          setUsageCount(0);
+          setIsPaid(false);
+        } else {
+          console.error('🔍 User status unexpected response:', statusRes.status);
+          setUsageCount(0);
+          setIsPaid(false);
+        }
+      } catch (statusError) {
+        console.error('🔍 User status request failed:', statusError);
+        setUsageCount(0);
+        setIsPaid(false);
+      }
+
+      // Generate invite link for authenticated user (with timeout)
       console.log('🔍 fetchUserData: Fetching referral data...');
       try {
-        const referralRes = await fetch("/api/referrals/data", {
-          method: "GET",
-          credentials: "include"
-        });
+        const referralRes = await Promise.race([
+          fetch("/api/referrals/data", {
+            method: "GET",
+            credentials: "include"
+          }),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Referral request timeout')), 5000)
+          )
+        ]) as Response;
         
         console.log('🔍 fetchUserData: Referral response status:', referralRes.status);
         
@@ -141,71 +196,6 @@ export default function AppLayout({
         console.error('🔍 fetchUserData: Error fetching referral data:', error);
         // Fallback to basic invite link
         setInviteLink(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`);
-      }
-
-      // Handle status result
-      console.log('🔍 fetchUserData: Processing status result...');
-      if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
-        console.log('🔍 fetchUserData: Status request successful');
-        const { user: userStatus } = await statusRes.value.json();
-        if (userStatus) {
-          console.log('🔍 fetchUserData: User status data:', userStatus);
-          setUsageCount(userStatus.daily_usage_count || 0);
-          setIsPaid(userStatus.is_paid || false);
-        } else {
-          console.log('🔍 fetchUserData: No user status data');
-          setUsageCount(0);
-          setIsPaid(false);
-        }
-      } else if (statusRes.status === 'fulfilled' && statusRes.value.status === 401) {
-        // Handle 401 errors gracefully - user might not be fully authenticated yet
-        console.log('🔍 User status returned 401 - user may not be fully authenticated yet');
-        console.log('🔍 Status response:', statusRes.value.status, statusRes.value.statusText);
-        
-        // Try to get more details about the error
-        try {
-          const errorData = await statusRes.value.json();
-          console.log('🔍 Error details:', errorData);
-        } catch (e) {
-          console.log('🔍 Could not parse error response');
-        }
-        
-        // Retry once after a short delay for production timing issues
-        setTimeout(async () => {
-          try {
-            console.log('🔍 Retrying user status after 401...');
-            const retryRes = await fetch("/api/user/status", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({}),
-            });
-            
-            if (retryRes.ok) {
-              const { user: retryUserStatus } = await retryRes.json();
-              if (retryUserStatus) {
-                console.log('✅ User status retry successful');
-                setUsageCount(retryUserStatus.daily_usage_count || 0);
-                setIsPaid(retryUserStatus.is_paid || false);
-              }
-            } else {
-              console.log('🔍 User status retry also failed:', retryRes.status);
-            }
-          } catch (retryError) {
-            console.error('🔍 User status retry error:', retryError);
-          }
-        }, 2000); // Wait 2 seconds before retry
-        
-        setUsageCount(0);
-        setIsPaid(false);
-      } else if (statusRes.status === 'rejected') {
-        console.error('🔍 User status request failed:', statusRes.reason);
-        setUsageCount(0);
-        setIsPaid(false);
-      } else {
-        console.error('🔍 User status unexpected response:', statusRes.status, statusRes.value?.status);
-        setUsageCount(0);
-        setIsPaid(false);
       }
       
       console.log('🔍 fetchUserData: Completed successfully');
