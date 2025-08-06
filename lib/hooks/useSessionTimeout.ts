@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { sessionTimeoutManager, SessionTimeoutState } from '@/lib/auth/session-timeout'
 import { createClient } from '@/lib/supabase/client'
 
@@ -21,6 +21,24 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
     autoStart = true
   } = options
 
+  // Use refs to store callback functions to prevent infinite re-renders
+  const onWarningRef = useRef(onWarning)
+  const onTimeoutRef = useRef(onTimeout)
+  const onRefreshRef = useRef(onRefresh)
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onWarningRef.current = onWarning
+  }, [onWarning])
+
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout
+  }, [onTimeout])
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh
+  }, [onRefresh])
+
   // Update state periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -33,8 +51,8 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
   // Handle warning
   const handleWarning = useCallback(() => {
     setIsWarningVisible(true)
-    onWarning?.()
-  }, [onWarning])
+    onWarningRef.current?.()
+  }, [])
 
   // Handle timeout
   const handleTimeout = useCallback(async () => {
@@ -47,19 +65,19 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
       console.error('Logout error:', error)
     }
     
-    onTimeout?.()
-  }, [onTimeout])
+    onTimeoutRef.current?.()
+  }, [])
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
-    onRefresh?.()
-  }, [onRefresh])
+    onRefreshRef.current?.()
+  }, [])
 
   // Start session timeout manager
   const start = useCallback(() => {
     sessionTimeoutManager.start(handleWarning, handleTimeout, handleRefresh)
     setState(sessionTimeoutManager.getState())
-  }, [handleWarning, handleTimeout, handleRefresh])
+  }, [])
 
   // Stop session timeout manager
   const stop = useCallback(() => {
@@ -98,9 +116,9 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
     return () => {
       stop()
     }
-  }, [autoStart, start, stop])
+  }, [autoStart, stop])
 
-  // Format time for display
+  // Format time for display - memoized to prevent unnecessary re-renders
   const formatTime = useCallback((milliseconds: number): string => {
     const minutes = Math.floor(milliseconds / (1000 * 60))
     const seconds = Math.floor((milliseconds % (1000 * 60)) / 1000)

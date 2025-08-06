@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSessionTimeout } from '@/lib/hooks/useSessionTimeout'
 
 interface SessionTimeoutWarningProps {
@@ -16,6 +16,15 @@ export function SessionTimeoutWarning({
   onDismiss,
   className = ''
 }: SessionTimeoutWarningProps) {
+  // Memoize callbacks to prevent infinite re-renders
+  const handleWarning = useCallback(() => {
+    // Warning is handled by the hook
+  }, [])
+
+  const handleTimeout = useCallback(() => {
+    // Timeout is handled by the hook
+  }, [])
+
   const {
     isWarningVisible,
     timeUntilTimeout,
@@ -24,12 +33,8 @@ export function SessionTimeoutWarning({
     refreshSession,
     dismissWarning
   } = useSessionTimeout({
-    onWarning: () => {
-      // Warning is handled by the hook
-    },
-    onTimeout: () => {
-      // Timeout is handled by the hook
-    }
+    onWarning: handleWarning,
+    onTimeout: handleTimeout
   })
 
   const [isVisible, setIsVisible] = useState(false)

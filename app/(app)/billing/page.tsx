@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUserData } from "../layout";
+import { useUserData } from "../../../lib/hooks/useUserData";
 
 // Types
 import { SubscriptionData } from "../../../lib/types/billing";

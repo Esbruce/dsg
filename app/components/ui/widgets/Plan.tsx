@@ -27,7 +27,7 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated, isLoading
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="font-bold">Pro Member</h3>
+          <h3 className="font-bold">Unlimited Member</h3>
         </div>
         <p className="text-sm text-green-100 mb-3">
           You have unlimited access to all features

@@ -223,9 +223,6 @@ function SignupPageContent() {
                 <p className="text-sm text-green-800">
                   🎉 You were invited by a friend! 
                 </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Referral ID: {referralUUID}
-                </p>
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "../../lib/supabase/client";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
@@ -9,38 +9,7 @@ import { LoginModalProvider } from "../components/auth";
 import { SessionTimeoutWarning } from "../components/auth/SessionTimeoutWarning";
 import { processReferralUUIDFromURL } from "../../lib/auth/referral-utils";
 import { useRequestIntent } from "../../lib/hooks/useRequestIntent";
-
-// Enhanced context interface
-interface UserDataContextType {
-  // Basic user data
-  userEmail: string | null;
-  userPhone: string | null;
-  userIdentifier: string | null; // Either email or phone for display
-  usageCount: number;
-  isPaid: boolean;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  
-  // Actions
-  refreshUserData: () => Promise<void>;
-  refreshAll: () => Promise<void>;
-}
-
-// Create enhanced context
-const UserDataContext = createContext<UserDataContextType>({
-  userEmail: null,
-  userPhone: null,
-  userIdentifier: null,
-  usageCount: 0,
-  isPaid: false,
-  isLoading: true,
-  isAuthenticated: false,
-  refreshUserData: async () => {},
-  refreshAll: async () => {},
-});
-
-// Export hook for using the context
-export const useUserData = () => useContext(UserDataContext);
+import { UserDataContext, UserDataContextType } from "../../lib/hooks/useUserData";
 
 export default function AppLayout({
   children,
@@ -54,16 +23,27 @@ export default function AppLayout({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userPhone, setUserPhone] = useState<string | null>(null);
   const [userIdentifier, setUserIdentifier] = useState<string | null>(null);
-  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+  const [isFetching, setIsFetching] = useState(false); // Add flag to prevent duplicate fetches
+  const [referralData, setReferralData] = useState<any>(null);
+  const [discountData, setDiscountData] = useState<any>(null);
 
   const maxUsage = 3;
-  const [inviteLink, setInviteLink] = useState<string>("");
 
   // Enhanced fetch user data function with performance optimizations
   const fetchUserData = useCallback(async () => {
+    // Prevent duplicate fetches using a ref to avoid dependency issues
+    if (isFetching) {
+      console.log('🔍 fetchUserData: Already fetching, skipping...');
+      return;
+    }
+
     console.log('🔍 fetchUserData: Starting...');
+    setIsFetching(true);
+    
     try {
       const supabase = createClient();
       console.log('🔍 fetchUserData: Supabase client created');
@@ -84,6 +64,7 @@ export default function AppLayout({
         console.error('🔍 fetchUserData: Supabase auth timeout - likely due to CAPTCHA interference:', authTimeoutError);
         // Set default values and continue
         setIsLoading(false);
+        setIsFetching(false);
         return;
       }
 
@@ -102,6 +83,7 @@ export default function AppLayout({
         setIsPaid(false);
         setInviteLink("");
         setIsLoading(false);
+        setIsFetching(false);
         return;
       }
       
@@ -114,168 +96,47 @@ export default function AppLayout({
       const identifier = user.email || user.phone || null;
       setUserIdentifier(identifier);
 
-      // Now fetch user status with timeout
-      console.log('🔍 fetchUserData: Fetching user status...');
-      try {
-        const statusRes = await Promise.race([
-          fetch("/api/user/status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({}),
-          }),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('User status request timeout')), 10000)
-          )
-        ]) as Response;
-
-        console.log('🔍 fetchUserData: Status response received:', statusRes.status);
-        
-        if (statusRes.ok) {
-          console.log('🔍 fetchUserData: Status request successful');
-          const { user: userStatus } = await statusRes.json();
-          if (userStatus) {
-            console.log('🔍 fetchUserData: User status data:', userStatus);
-            setUsageCount(userStatus.daily_usage_count || 0);
-            setIsPaid(userStatus.is_paid || false);
-          } else {
-            console.log('🔍 fetchUserData: No user status data');
-            setUsageCount(0);
-            setIsPaid(false);
-          }
-        } else if (statusRes.status === 404) {
-          console.log('🔍 User status returned 404 - user record not found, creating...');
-          
-          // User record doesn't exist, create it
-          try {
-            const createUserRes = await fetch("/api/supabase/create-user", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({}),
-            });
-            
-            if (createUserRes.ok) {
-              console.log('✅ User record created successfully');
-              // Retry fetching user status after creating the record
-              const retryStatusRes = await fetch("/api/user/status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({}),
-              });
-              
-              if (retryStatusRes.ok) {
-                const { user: retryUserStatus } = await retryStatusRes.json();
-                if (retryUserStatus) {
-                  console.log('✅ User status retry successful after creation:', retryUserStatus);
-                  setUsageCount(retryUserStatus.daily_usage_count || 0);
-                  setIsPaid(retryUserStatus.is_paid || false);
-                }
-              } else {
-                console.log('🔍 User status retry failed after creation:', retryStatusRes.status);
-                setUsageCount(0);
-                setIsPaid(false);
-              }
-            } else {
-              console.log('🔍 User creation failed:', createUserRes.status);
-              setUsageCount(0);
-              setIsPaid(false);
-            }
-          } catch (createError) {
-            console.error('🔍 User creation error:', createError);
-            setUsageCount(0);
-            setIsPaid(false);
-          }
-        } else if (statusRes.status === 401) {
-          console.log('🔍 User status returned 401 - user may not be fully authenticated yet');
-          
-          // Retry once after a short delay for production timing issues
-          setTimeout(async () => {
-            try {
-              console.log('🔍 Retrying user status after 401...');
-              const retryRes = await fetch("/api/user/status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({}),
-              });
-              
-              if (retryRes.ok) {
-                const { user: retryUserStatus } = await retryRes.json();
-                if (retryUserStatus) {
-                  console.log('✅ User status retry successful');
-                  setUsageCount(retryUserStatus.daily_usage_count || 0);
-                  setIsPaid(retryUserStatus.is_paid || false);
-                }
-              } else {
-                console.log('🔍 User status retry also failed:', retryRes.status);
-              }
-            } catch (retryError) {
-              console.error('🔍 User status retry error:', retryError);
-            }
-          }, 2000);
-          
-          setUsageCount(0);
-          setIsPaid(false);
-        } else {
-          console.error('🔍 User status unexpected response:', statusRes.status);
-          setUsageCount(0);
-          setIsPaid(false);
-        }
-      } catch (statusError) {
-        console.error('🔍 User status request failed:', statusError);
-        setUsageCount(0);
-        setIsPaid(false);
-      }
-
-      // Generate invite link for authenticated user (with timeout)
-      console.log('🔍 fetchUserData: Fetching referral data...');
-      try {
-        const referralRes = await Promise.race([
-          fetch("/api/referrals/data", {
-            method: "GET",
-            credentials: "include"
-          }),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Referral request timeout')), 5000)
-          )
-        ]) as Response;
-        
-        console.log('🔍 fetchUserData: Referral response status:', referralRes.status);
-        
-        if (referralRes.ok) {
-          const referralData = await referralRes.json();
-          console.log('🔍 fetchUserData: Referral data received:', referralData);
-          setInviteLink(referralData.data?.referralLink || "");
-          console.log('🔍 fetchUserData: Referral link set to:', referralData.data?.referralLink || "");
-        } else {
-          // Fallback to basic invite link if referral data fails
-          const fallbackLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`;
-          setInviteLink(fallbackLink);
-          console.log('🔍 fetchUserData: Using fallback referral link:', fallbackLink);
-        }
-      } catch (error) {
-        console.error('🔍 fetchUserData: Error fetching referral data:', error);
-        // Fallback to basic invite link
-        const fallbackLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://dsg.com'}/signup?ref=${user.id}`;
-        setInviteLink(fallbackLink);
-        console.log('🔍 fetchUserData: Using fallback referral link due to error:', fallbackLink);
-      }
+      // Now fetch all other user data in parallel for performance
+      console.log('🔍 fetchUserData: Fetching combined user data...');
       
+      const res = await fetch("/api/user/data", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      console.log('🔍 fetchUserData: Combined data fetch completed. Status:', res.status);
+
+      if (res.ok) {
+        const { userStatus, referral, discount } = await res.json();
+
+        // Process user status response
+        if (userStatus) {
+          setUsageCount(userStatus.daily_usage_count || 0);
+          setIsPaid(userStatus.is_paid || false);
+        }
+
+        // Process referral data response
+        if (referral && referral.referralLink) {
+          setInviteLink(referral.referralLink);
+          setReferralData(referral);
+        }
+
+        // Process discount data response
+        if (discount) {
+          setDiscountData(discount);
+        }
+      } else {
+        console.error('🔍 fetchUserData: Combined data request failed:', res.status);
+      }
+
       console.log('🔍 fetchUserData: Completed successfully');
     } catch (error) {
       console.error('🔍 fetchUserData: Unexpected error:', error);
-      setIsAuthenticated(false);
-      setUserEmail(null);
-      setUserPhone(null);
-      setUserIdentifier(null);
-      setUsageCount(0);
-      setIsPaid(false);
-      setInviteLink("");
     } finally {
       console.log('🔍 fetchUserData: Setting isLoading to false');
       setIsLoading(false);
+      setIsFetching(false);
     }
   }, []);
 
@@ -300,11 +161,13 @@ export default function AppLayout({
       isPaid: displayIsPaid,
       isLoading,
       isAuthenticated,
+      referralData,
+      discountData,
       refreshUserData: refreshUserData,
       refreshAll: refreshUserData,
     };
     return value;
-  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, refreshUserData]);
+  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, referralData, discountData, refreshUserData]);
 
   // Fetch user data on component mount and listen for auth changes
   useEffect(() => {
@@ -333,12 +196,14 @@ export default function AppLayout({
         setUsageCount(0);
         setIsPaid(false);
         setIsLoading(false);
+        setIsFetching(false);
         // Clear any stored request intent on logout
         clearRequestIntent();
       } else if (event === 'SIGNED_IN' && session) {
         console.log('🔍 SIGNED_IN event triggered with session:', session.user.id);
-        // Set authentication state immediately
+        // Set authentication state immediately and trigger loading state
         setIsAuthenticated(true);
+        setIsLoading(true);
         setUserEmail(session.user.email || null);
         setUserPhone(session.user.phone || null);
         
@@ -346,27 +211,35 @@ export default function AppLayout({
         const identifier = session.user.email || session.user.phone || null;
         setUserIdentifier(identifier);
         
-        // Add a longer delay to ensure session is fully established and cookies are set
-        // Increased delay for production to handle session propagation
-        console.log('🔍 Setting timeout for fetchUserData...');
-        setTimeout(async () => {
-          try {
-            console.log('🔄 Fetching user data after sign in...');
-            await fetchUserData();
-            console.log('✅ fetchUserData completed successfully');
-          } catch (error) {
-            console.error('❌ Error in fetchUserData timeout:', error);
-            // Don't fail the auth flow if user data fetch fails
-            // Set loading to false so UI doesn't get stuck
-            setIsLoading(false);
-          }
-        }, 1000); // Increased from 500ms to 1000ms for production
+        // Only fetch user data if we're not already fetching
+        if (!isFetching) {
+          // Add a longer delay to ensure session is fully established and cookies are set
+          // Increased delay for production to handle session propagation
+          console.log('🔍 Setting timeout for fetchUserData...');
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Fetching user data after sign in...');
+              await fetchUserData();
+              console.log('✅ fetchUserData completed successfully');
+            } catch (error) {
+              console.error('❌ Error in fetchUserData timeout:', error);
+              // Don't fail the auth flow if user data fetch fails
+              // Set loading to false so UI doesn't get stuck
+              setIsLoading(false);
+              setIsFetching(false);
+            }
+          }, 1000); // Increased from 500ms to 1000ms for production
+        } else {
+          console.log('🔍 fetchUserData already in progress, skipping duplicate call');
+        }
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        // Refresh user data when token is refreshed
-        try {
-          await fetchUserData();
-        } catch (error) {
-          console.error('Error fetching user data after token refresh:', error);
+        // Only refresh user data if we're not already fetching
+        if (!isFetching) {
+          try {
+            await fetchUserData();
+          } catch (error) {
+            console.error('Error fetching user data after token refresh:', error);
+          }
         }
       }
     });
@@ -376,7 +249,7 @@ export default function AppLayout({
       clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, [fetchUserData]); // Remove dependencies that cause frequent restarts
+  }, []); // Remove fetchUserData dependency to prevent infinite re-renders
 
   const handleCopyInviteLink = async () => {
     try {
@@ -413,7 +286,7 @@ export default function AppLayout({
   };
 
   // Show loading state while checking authentication
-  if (isLoading) {
+  if (isLoading && !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -459,9 +332,9 @@ export default function AppLayout({
           </div>
         </div>
 
-        {/* Session Timeout Warning - Temporarily disabled to debug re-render loop */}
-        {/* <SessionTimeoutWarning /> */}
+        {/* Session Timeout Warning */}
+        <SessionTimeoutWarning />
       </UserDataContext.Provider>
     </LoginModalProvider>
   );
-} 
+}

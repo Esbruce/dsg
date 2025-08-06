@@ -7,10 +7,36 @@ export interface CaptchaResult {
 export class CaptchaService {
   private readonly secretKey: string | undefined
   private readonly threshold: number
+  private readonly timeout: number
 
   constructor() {
     this.secretKey = process.env.TURNSTILE_SECRET_KEY
     this.threshold = parseFloat(process.env.TURNSTILE_THRESHOLD || '0.5')
+    this.timeout = parseInt(process.env.TURNSTILE_TIMEOUT || '10000') // 10 seconds default
+  }
+
+  /**
+   * Check if CAPTCHA is properly configured
+   */
+  isConfigured(): boolean {
+    return !!this.secretKey
+  }
+
+  /**
+   * Get configuration status for debugging
+   */
+  getConfigStatus(): {
+    configured: boolean
+    hasSecretKey: boolean
+    threshold: number
+    timeout: number
+  } {
+    return {
+      configured: this.isConfigured(),
+      hasSecretKey: !!this.secretKey,
+      threshold: this.threshold,
+      timeout: this.timeout
+    }
   }
 
   /**
@@ -18,6 +44,12 @@ export class CaptchaService {
    */
   async verifyToken(token: string, ipAddress?: string): Promise<CaptchaResult> {
     try {
+      // Development mode bypass for testing
+      if (process.env.NODE_ENV === 'development' && token === 'dev-skip-token') {
+        console.log('🔧 Development mode: Bypassing CAPTCHA verification');
+        return { success: true, score: 1.0 };
+      }
+
       // Check if CAPTCHA is configured
       if (!this.secretKey) {
         console.warn('⚠️ TURNSTILE_SECRET_KEY not configured, skipping CAPTCHA verification')
@@ -25,7 +57,14 @@ export class CaptchaService {
       }
 
       if (!token) {
+        console.error('❌ No CAPTCHA token provided')
         return { success: false, error: 'No CAPTCHA token provided' }
+      }
+
+      // Validate token format (basic check)
+      if (token.length < 10) {
+        console.error('❌ Invalid CAPTCHA token format')
+        return { success: false, error: 'Invalid CAPTCHA token format' }
       }
 
       // Prepare verification request
@@ -36,14 +75,30 @@ export class CaptchaService {
         formData.append('remoteip', ipAddress)
       }
 
-      // Verify with Cloudflare
+      console.log('🔒 Verifying CAPTCHA token with Cloudflare...')
+
+      // Verify with Cloudflare with timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout) // Use class timeout
+
       const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: formData.toString(),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        console.error('❌ CAPTCHA verification request failed:', response.status, response.statusText)
+        return { 
+          success: false, 
+          error: `CAPTCHA verification request failed: ${response.status}`
+        }
+      }
 
       const result = await response.json()
 
@@ -74,6 +129,21 @@ export class CaptchaService {
 
     } catch (error) {
       console.error('❌ CAPTCHA verification error:', error)
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          return { 
+            success: false, 
+            error: 'CAPTCHA verification timeout'
+          }
+        }
+        return { 
+          success: false, 
+          error: `CAPTCHA verification error: ${error.message}`
+        }
+      }
+      
       return { 
         success: false, 
         error: 'CAPTCHA verification error'
@@ -104,5 +174,5 @@ export class CaptchaService {
   }
 }
 
-// Create singleton instance
+// Export singleton instance
 export const captchaService = new CaptchaService() 

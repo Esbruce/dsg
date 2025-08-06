@@ -18,8 +18,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Medical Notes Summarizer",
+  title: "Discharge Summary Generator",
   description: "AI-powered medical notes summarization tool for healthcare professionals",
+  icons: {
+    icon: "/fav.png",
+  },
 };
 
 export default function RootLayout({

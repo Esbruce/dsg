@@ -1,12 +1,32 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TurnstileCaptcha from '@/app/components/auth/TurnstileCaptcha';
 
 export default function CaptchaTestPage() {
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [captchaError, setCaptchaError] = useState<string>('');
   const [siteKey, setSiteKey] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<string>('');
+
+  useEffect(() => {
+    // Check environment variables
+    const envSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    setSiteKey(envSiteKey || '');
+    
+    // Collect debug information
+    const debug = [
+      `NODE_ENV: ${process.env.NODE_ENV}`,
+      `Site Key: ${envSiteKey ? 'SET' : 'NOT SET'}`,
+      `Base URL: ${process.env.NEXT_PUBLIC_BASE_URL || 'NOT SET'}`,
+      `User Agent: ${navigator.userAgent}`,
+      `Location: ${window.location.href}`,
+      `Protocol: ${window.location.protocol}`,
+      `Host: ${window.location.host}`,
+    ].join('\n');
+    
+    setDebugInfo(debug);
+  }, []);
 
   const handleCaptchaVerify = (token: string) => {
     console.log('✅ CAPTCHA verified, token received:', token.substring(0, 20) + '...');
@@ -18,6 +38,19 @@ export default function CaptchaTestPage() {
     console.log('❌ CAPTCHA error:', error);
     setCaptchaError(error);
     setCaptchaToken('');
+  };
+
+  const testEnvironmentVariables = () => {
+    const envSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    alert(`Environment Check:\nSite Key: ${envSiteKey ? 'SET' : 'NOT SET'}\nNODE_ENV: ${process.env.NODE_ENV}`);
+  };
+
+  const testScriptLoading = () => {
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.onload = () => alert('✅ Script loaded successfully');
+    script.onerror = () => alert('❌ Script failed to load');
+    document.head.appendChild(script);
   };
 
   return (
@@ -90,13 +123,28 @@ export default function CaptchaTestPage() {
               </div>
             )}
 
-            <div className="mt-6 text-center">
-              <h4 className="font-semibold text-gray-900 mb-2">Environment Variables</h4>
-              <div className="text-xs text-gray-600 space-y-1">
-                <p>NODE_ENV: {process.env.NODE_ENV}</p>
-                <p>NEXT_PUBLIC_TURNSTILE_SITE_KEY: {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? 'SET' : 'NOT SET'}</p>
-                <p>NEXT_PUBLIC_BASE_URL: {process.env.NEXT_PUBLIC_BASE_URL || 'NOT SET'}</p>
-              </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={testEnvironmentVariables}
+                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+              >
+                Test Environment
+              </button>
+              <button
+                onClick={testScriptLoading}
+                className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+              >
+                Test Script Load
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Debug Information</h4>
+              <textarea
+                value={debugInfo}
+                readOnly
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50"
+              />
             </div>
           </div>
         </div>

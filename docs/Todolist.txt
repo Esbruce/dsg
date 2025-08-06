@@ -1,0 +1,32 @@
+Today we have a lot to do before launch. 
+Use this list to help give context to the fixes i instruct you to make in the chat.
+
+1 we need to improve the security of the protected routes. By this I mean to make sure that users cannot access a route they
+
+are not supposed to. Are protected routes and components are 
+
+billing page (must be authenticated)
+processing doc (must be authenticated)
+Invite widget in sidebar (must be authenticated)
+
+
+
+4 we need to ensure that the user sessions only last 15 minutes. ie they get signed out after 15 minutes of unactivitiy or maybe we should make that shortet
+
+5 we need to configure a production stripe 
+
+6 we need to ensure there are no syncing issues of the user data
+
+
+8 We need to upload a favicon and rename the site name to Discharge Summary Generator
+
+
+10 We need to test the security of the app and database
+
+11 I noticed that the app was not loading user status correcly when i was not on incognito tab. We need to investigate this and fix it.
+
+Any other things you recognise when asked you should site and tell mean
+
+These points arent in a particular order. 
+
+

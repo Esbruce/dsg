@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useContext } from 'react';
+import { useUserData } from './useUserData';
 
 interface ReferralDiscountStatus {
   hasDiscount: boolean;
@@ -8,41 +9,12 @@ interface ReferralDiscountStatus {
 }
 
 export function useReferralDiscount(): ReferralDiscountStatus {
-  const [status, setStatus] = useState<ReferralDiscountStatus>({
-    hasDiscount: false,
-    discountPercentage: 0,
-    isLoading: true,
-    error: null
-  });
+  const { discountData, isLoading } = useUserData();
 
-  useEffect(() => {
-    fetchDiscountStatus();
-  }, []);
-
-  const fetchDiscountStatus = async () => {
-    try {
-      const response = await fetch('/api/referrals/discount-status', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setStatus({
-          ...data,
-          isLoading: false,
-          error: null
-        });
-      } else {
-        throw new Error('Failed to fetch discount status');
-      }
-    } catch (error) {
-      setStatus(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }));
-    }
+  return {
+    hasDiscount: discountData?.hasDiscount || false,
+    discountPercentage: discountData?.discountPercentage || 0,
+    isLoading: isLoading,
+    error: null // Errors are handled in the context
   };
-
-  return status;
 } 

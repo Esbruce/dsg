@@ -4,6 +4,9 @@ import Usage from "../ui/widgets/Usage";
 import Plan from "../ui/widgets/Plan";
 import Invite from "../ui/widgets/Invite";
 import SideNav from "./SideNav";
+import { UsageSkeleton } from "../ui/widgets/UsageSkeleton";
+import { PlanSkeleton } from "../ui/widgets/PlanSkeleton";
+import { InviteSkeleton } from "../ui/widgets/InviteSkeleton";
 
 type SidebarProps = {
   usageCount: number;
@@ -29,6 +32,8 @@ export default function Sidebar({
   isLoading = false
 }: SidebarProps) {
   
+  const showSkeletons = isAuthenticated && isLoading;
+
   return (
     <aside className="w-80 h-full bg-[var(--color-bg-4)] border-r border-[var(--color-neutral-300)] flex flex-col">
       {/* Branding */}
@@ -43,28 +48,35 @@ export default function Sidebar({
 
       {/* Main Content */}
       <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-        <Usage 
-          usageCount={usageCount}
-          maxUsage={maxUsage}
-          isPaid={isPaid}
-        />
-
-        <Plan 
-          isPaid={isPaid}
-          onGoUnlimited={onGoUnlimited}
-          isAuthenticated={isAuthenticated}
-          isLoading={isLoading}
-        />
-
-        {/* Only show Invite widget for authenticated users */}
-        {isAuthenticated && (
-          <Invite 
-            inviteLink={inviteLink}
-            onCopyInviteLink={onCopyInviteLink}
-            inviteLinkCopied={inviteLinkCopied}
-          />
+        {showSkeletons ? (
+          <>
+            <UsageSkeleton />
+            <PlanSkeleton />
+            <InviteSkeleton />
+          </>
+        ) : (
+          <>
+            <Usage 
+              usageCount={usageCount}
+              maxUsage={maxUsage}
+              isPaid={isPaid}
+            />
+            <Plan 
+              isPaid={isPaid}
+              onGoUnlimited={onGoUnlimited}
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+            />
+            {isAuthenticated && (
+              <Invite 
+                inviteLink={inviteLink}
+                onCopyInviteLink={onCopyInviteLink}
+                inviteLinkCopied={inviteLinkCopied}
+              />
+            )}
+          </>
         )}
       </div>
     </aside>
   );
-} 
+}

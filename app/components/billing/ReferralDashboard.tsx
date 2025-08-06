@@ -2,48 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useReferralDiscount } from '@/lib/hooks/useReferralDiscount';
+import { useReferralData } from '@/lib/hooks/useReferralData';
 
-interface ReferralData {
-  referralLink: string;
-  hasInvitedFriend: boolean;
-  referrerInfo?: {
-    id: string;
-    createdAt: string;
-  };
-}
+// Interface is now imported from the centralized hook
 
 export default function ReferralDashboard() {
-  const [referralData, setReferralData] = useState<ReferralData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { hasDiscount, discountPercentage } = useReferralDiscount();
-
-  useEffect(() => {
-    fetchReferralData();
-  }, []);
-
-  const fetchReferralData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/referrals/data', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch referral data');
-      }
-
-      const result = await response.json();
-      setReferralData(result.data);
-    } catch (err) {
-      console.error('Error fetching referral data:', err);
-      setError('Failed to load referral data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const referralData = useReferralData();
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -63,33 +29,13 @@ export default function ReferralDashboard() {
     });
   };
 
-  if (loading) {
+  // Loading and error states are handled by the context
+  if (!referralData) {
     return (
       <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
         <div className="text-center py-4">
           <div className="w-6 h-6 border-2 border-gray-300 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-2"></div>
           <p className="text-gray-600">Loading referral data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
-        <div className="text-center py-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-gray-600 mb-2">Failed to load referral data</p>
-          <button 
-            onClick={fetchReferralData}
-            className="text-[var(--color-primary)] hover:underline text-sm"
-          >
-            Try again
-          </button>
         </div>
       </div>
     );
@@ -138,7 +84,7 @@ export default function ReferralDashboard() {
           Share your referral link with friends. When they upgrade to Pro, you'll get a permanent 50% discount on your subscription!
         </p>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <input
             type="text"
             value={referralData.referralLink}
@@ -155,7 +101,7 @@ export default function ReferralDashboard() {
       </div>
 
       {/* Friend Status */}
-      {referralData.hasInvitedFriend && referralData.referrerInfo && (
+      {referralData.hasBeenReferred && referralData.referrerInfo && (
         <div className="pt-6 border-t border-[var(--color-neutral-200)]">
           <h3 className="text-lg font-medium text-gray-900 mb-3">Your Referred Friend</h3>
           <div className="p-4 bg-gray-50 rounded-lg">

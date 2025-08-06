@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 import PhoneInput from './PhoneInput';
 import CodeInput from './CodeInput';
@@ -63,23 +63,21 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>("");
-  const [captchaError, setCaptchaError] = useState<string>("");
+  const [captchaError, setCaptchaError] = useState("");
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaKey, setCaptchaKey] = useState(0);
+
   const router = useRouter();
   const { getRequestIntent, clearRequestIntent } = useRequestIntent();
   
-  // Component mounted
-  React.useEffect(() => {
-    // Component is ready
+  const { state: otpState, updateState: updateOTPState } = useOTPState();
+  const { otpTimer, otpResendTimer, startTimers, resetTimers } = useOTPTimers();
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
   }, []);
 
-  // Debug function removed for security
-  
-  // Use the new OTP service and hooks
-  const { state: otpState, updateState: updateOTPState, resetOTPState } = useOTPState();
-  const { otpTimer, otpResendTimer, startTimers, resetTimers } = useOTPTimers();
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumber(e.target.value);
@@ -90,189 +88,119 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     updateOTPState({ otp: e.target.value, otpError: "" });
   };
 
-  const handleCaptchaVerify = (token: string) => {
-    console.log('✅ CAPTCHA verified, token received')
-    setCaptchaToken(token);
-    setCaptchaError("");
-    // Automatically send OTP after CAPTCHA verification
-    sendOTPWithCaptcha(token);
-  };
-
-  const handleCaptchaError = (error: string) => {
-    console.log('❌ CAPTCHA error:', error)
-    setCaptchaError(error);
-    setCaptchaToken("");
-    setIsProcessing(false);
-    // Reset CAPTCHA state to allow retry
-    setShowCaptcha(false);
-    setTimeout(() => {
-      setCaptchaKey(prev => prev + 1);
-      setShowCaptcha(true);
-    }, 100);
-  };
-
   const sendOTPWithCaptcha = async (token: string) => {
-    setIsProcessing(true);
     setError("");
-
     try {
       const result = await otpClientService.sendOTP(phoneNumber, token);
+      if (!isMountedRef.current) return;
 
       if (result.success) {
         updateOTPState({ otpSent: true });
         startTimers();
         setShowCaptcha(false);
-        setCaptchaError(""); // Clear any CAPTCHA errors
+        setCaptchaError("");
       } else {
-        // Handle specific error types
-        if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
-          const timeUntilReset = result.timeUntilReset || 10; // Default to 10 minutes if not provided
-          setError(`Too many attempts. Please wait ${timeUntilReset} minutes before trying again.`);
-          // Reset CAPTCHA for rate limit errors
-          setCaptchaKey(prev => prev + 1);
-          // Disable the form for the duration
-          setTimeout(() => {
-            setError("");
-          }, timeUntilReset * 60 * 1000); // Clear error after time period
-        } else {
-          setError(result.error || "Failed to send OTP");
-        }
+        setError(result.error || "Failed to send OTP");
+        // Since we are no longer using a ref, we can't reset the captcha from here.
+        // Instead, the user can use the retry button.
       }
-    } catch (error) {
-      console.error('Error sending OTP:', error);
-      setError("An unexpected error occurred. Please try again.");
+    } catch (err) {
+      console.error('Error sending OTP:', err);
+      if (isMountedRef.current) {
+        setError("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsProcessing(false);
+      }
     }
-
-    setIsProcessing(false);
   };
 
+  const handleCaptchaError = (error: string) => {
+    console.error('❌ LoginModal: CAPTCHA error received:', error);
+    setCaptchaError(error);
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCaptchaVerify = (token: string) => {
+    console.log('✅ LoginModal: CAPTCHA verified, proceeding to send OTP');
+    setCaptchaError("");
+    sendOTPWithCaptcha(token);
+  };
+  
   const handlePhoneNumberSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // For minimal implementation, always show CAPTCHA
-    // In production, you'd check risk factors here
+    setError("");
+    setCaptchaError("");
+    setIsProcessing(true);
     setShowCaptcha(true);
-    setIsProcessing(false); // Don't set processing until CAPTCHA is verified
   };
 
   const handleOTPSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     updateOTPState({ otpProcessing: true, otpError: "" });
-
     try {
       const result = await otpClientService.verifyOTP(phoneNumber, otpState.otp);
-
+      if (!isMountedRef.current) return;
+      
       if (result.success) {
-        // Session is already set by the client-side Supabase client
-        // No need to manually set it
-        
         updateOTPState({ isOTPVerified: true, otpProcessing: false });
+        try { await createUserWithReferral(); } catch (referralError) { console.error('Error handling referral:', referralError); }
         
-        // Handle referral if user came through a referral link
-        try {
-          await createUserWithReferral();
-        } catch (referralError) {
-          console.error('Error handling referral:', referralError);
-          // Don't fail the auth flow if referral fails
-        }
+        onAuthSuccess?.();
         
-        // Trigger auth success callback to refresh user data
-        if (onAuthSuccess) {
-          onAuthSuccess();
-        }
-        
-        // Check for stored request intent and redirect if needed
         const intent = getRequestIntent();
         const currentPath = window.location.pathname;
-        
-        // Only redirect if there's a stored intent AND it's different from current path
-        // AND it's not the home page (to avoid unnecessary redirects)
-        if (intent && intent.path !== currentPath && intent.path !== '/') {
-          // Clear the intent first
-          clearRequestIntent();
-          // Redirect to the intended page
-          setTimeout(() => {
-            router.push(intent.path);
-            if (onClose) onClose();
-          }, 1000);
-        } else {
-          // Clear any stored intent and close modal - no page reload needed
-          clearRequestIntent();
-          setTimeout(() => {
-            if (onClose) onClose();
-          }, 1000);
-        }
-      } else if (result.error?.includes('Invalid OTP') || result.error?.includes('Invalid token')) {
-        // Handle specific OTP errors
-        updateOTPState({ 
-          otpError: "Invalid verification code. Please check and try again.",
-          otpProcessing: false 
-        });
-      } else if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
-        // Handle rate limiting specifically
-        const timeUntilReset = result.timeUntilReset || 15; // Default to 15 minutes if not provided
-        updateOTPState({ 
-          otpError: `Too many verification attempts. Please wait ${timeUntilReset} minutes before trying again.`,
-          otpProcessing: false 
-        });
+        const targetPath = (intent && intent.payload.type === 'navigate' && intent.payload.path !== currentPath && intent.payload.path !== '/') ? intent.payload.path : null;
+
+        clearRequestIntent();
+        setTimeout(() => {
+          if (targetPath) router.push(targetPath);
+          onClose?.();
+        }, 1000);
+
       } else {
-        updateOTPState({ 
-          otpError: result.error || "Verification failed",
-          otpProcessing: false 
-        });
+        updateOTPState({ otpError: result.error || "Verification failed", otpProcessing: false });
       }
     } catch (error) {
-      updateOTPState({ 
-        otpError: "An unexpected error occurred. Please try again.",
-        otpProcessing: false 
-      });
+      if (isMountedRef.current) {
+        updateOTPState({ otpError: "An unexpected error occurred.", otpProcessing: false });
+      }
     }
   };
 
   const handleResendOTP = async () => {
     if (otpResendTimer > 0) return;
-    
     updateOTPState({ otpResendError: "" });
-    
     const result = await otpClientService.resendOTP(phoneNumber);
-
     if (result.success) {
       startTimers();
     } else {
-      // Handle rate limiting specifically
-      if (result.error?.includes('Rate limit') || result.error?.includes('429') || result.rateLimited) {
-        const timeUntilReset = result.timeUntilReset || 3; // Default to 3 minutes if not provided
-        updateOTPState({ 
-          otpResendError: `Too many resend attempts. Please wait ${timeUntilReset} minutes before trying again.` 
-        });
-      } else {
-        updateOTPState({ otpResendError: result.error || "Failed to resend code" });
-      }
+      updateOTPState({ otpResendError: result.error || "Failed to resend code" });
     }
   };
 
   const handleBackToPhone = () => {
     updateOTPState({ otpSent: false, otp: "", otpError: "", otpProcessing: false });
     resetTimers();
+    setShowCaptcha(false);
+    setIsProcessing(false);
   };
 
-  const handleClearStuckState = () => {
-    updateOTPState({ 
-      otpProcessing: false, 
-      otpError: "Verification was cancelled. Please try again with a fresh code." 
-    });
-  };
+  const handleRetry = () => {
+    setCaptchaError('');
+    setIsProcessing(true);
+    setShowCaptcha(false); 
+    setTimeout(() => setShowCaptcha(true), 50);
+  }
 
   return (
     <div>
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Sign in
-        </h2>
-        <p className="text-gray-600">
-          Please authenticate to continue
-        </p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign in</h2>
+        <p className="text-gray-600">Please authenticate to continue</p>
       </div>
       
       {otpState.isOTPVerified ? (
@@ -280,31 +208,21 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
       ) : !otpState.otpSent ? (
         <>
           {showCaptcha ? (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-4">
-                  Please complete the security check below to send your verification code
-                </p>
-                <TurnstileCaptcha
-                  key={`turnstile-captcha-${captchaKey}`}
-                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
-                  onVerify={handleCaptchaVerify}
-                  onError={handleCaptchaError}
-                  className="flex justify-center"
-                />
-                {captchaError && (
-                  <p className="mt-2 text-sm text-red-600">{captchaError}</p>
-                )}
-                <p className="mt-2 text-xs text-gray-500">
-                  Click the checkbox above to verify you're human
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCaptcha(false)}
-                className="w-full text-gray-500 hover:text-gray-700 text-sm underline"
-              >
-                Back to phone number
-              </button>
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-gray-600 mb-4">{isProcessing ? "Verifying you're human..." : ""}</p>
+              <TurnstileCaptcha
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                onVerify={handleCaptchaVerify}
+                onError={handleCaptchaError}
+              />
+              {captchaError && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm text-red-600">{captchaError}</p>
+                  <button onClick={handleRetry} className="text-sm text-blue-600 hover:underline" disabled={isProcessing}>
+                    Try again
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <PhoneInput
@@ -317,33 +235,28 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
           )}
         </>
       ) : (
-        <>
-          <CodeInput
-            phoneNumber={phoneNumber}
-            otp={otpState.otp}
-            onOTPChange={handleOTPChange}
-            onSubmit={handleOTPSubmit}
-            onResend={handleResendOTP}
-            onBackToPhone={handleBackToPhone}
-            isProcessing={otpState.otpProcessing}
-            error={otpState.otpError}
-            otpTimer={otpTimer}
-            otpResendTimer={otpResendTimer}
-            resendError={otpState.otpResendError}
-          />
-          
-          {/* Debug buttons removed for security */}
-        </>
+        <CodeInput
+          phoneNumber={phoneNumber}
+          otp={otpState.otp}
+          onOTPChange={handleOTPChange}
+          onSubmit={handleOTPSubmit}
+          onResend={handleResendOTP}
+          onBackToPhone={handleBackToPhone}
+          isProcessing={otpState.otpProcessing}
+          error={otpState.otpError}
+          otpTimer={otpTimer}
+          otpResendTimer={otpResendTimer}
+          resendError={otpState.otpResendError}
+        />
       )}
       
       <div className="mt-6 text-center">
-        <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 text-sm underline"
-        >
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-sm underline">
           Continue browsing without signing in
         </button>
       </div>
     </div>
   );
-} 
+}
+
+

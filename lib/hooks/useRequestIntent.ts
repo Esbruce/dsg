@@ -1,21 +1,34 @@
 import { useState, useCallback, useEffect } from 'react';
 
-interface RequestIntent {
+export interface NavigationIntent {
+  type: 'navigate';
   path: string;
+}
+
+export interface ActionIntent<T = unknown> {
+  type: 'action';
+  name: string;
+  payload?: T;
+}
+
+export type RequestIntentPayload = NavigationIntent | ActionIntent;
+
+export interface FullRequestIntent {
+  payload: RequestIntentPayload;
   timestamp: number;
 }
 
 const REQUEST_INTENT_KEY = 'dsg_request_intent';
 
 export function useRequestIntent() {
-  const [intent, setIntent] = useState<RequestIntent | null>(null);
+  const [intent, setIntent] = useState<FullRequestIntent | null>(null);
 
   // Load intent from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(REQUEST_INTENT_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as FullRequestIntent;
         // Only use intent if it's less than 1 hour old
         if (Date.now() - parsed.timestamp < 60 * 60 * 1000) {
           setIntent(parsed);
@@ -29,10 +42,10 @@ export function useRequestIntent() {
     }
   }, []);
 
-  const setRequestIntent = useCallback((path: string) => {
-    const newIntent: RequestIntent = {
-      path,
-      timestamp: Date.now()
+  const setRequestIntent = useCallback((payload: RequestIntentPayload) => {
+    const newIntent: FullRequestIntent = {
+      payload,
+      timestamp: Date.now(),
     };
     setIntent(newIntent);
     try {
@@ -59,6 +72,7 @@ export function useRequestIntent() {
     setRequestIntent,
     clearRequestIntent,
     getRequestIntent,
-    hasIntent: !!intent
+    intent,
+    hasIntent: !!intent,
   };
-} 
+}

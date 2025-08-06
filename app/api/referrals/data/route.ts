@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { referralService } from '@/lib/referral/referral-service';
 
 export async function GET(req: NextRequest) {
   try {
-    const referralData = await referralService.getCurrentUserReferralData();
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: referralData 
+    // For now, return mock data
+    return NextResponse.json({
+      referralLink: "https://example.com/referral/mock",
+      hasBeenReferred: false,
+      referrerInfo: null
     });
   } catch (error) {
-    console.error('Error getting referral data:', error);
-    return NextResponse.json({ 
-      error: 'Failed to get referral data' 
-    }, { status: 500 });
+    console.error('Referrals data error:', error);
+    return NextResponse.json({ error: 'Failed to fetch referral data' }, { status: 500 });
   }
 } 
