@@ -8,7 +8,7 @@ export default function Hero() {
         <span className="text-[var(--color-primary)]">
           Discharge Summary
         </span>{" "}
-        in seconds
+        in Seconds
       </h1>
       <p className="text-lg text-[var(--color-neutral-600)]">
         Made with doctors, for doctors.

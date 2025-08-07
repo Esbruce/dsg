@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react'
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import PhoneInput from './PhoneInput';
 import CodeInput from './CodeInput';
@@ -65,6 +65,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
   const [isProcessing, setIsProcessing] = useState(false);
   const [captchaError, setCaptchaError] = useState("");
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const router = useRouter();
   const { getRequestIntent, clearRequestIntent } = useRequestIntent();
@@ -78,17 +79,17 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     return () => { isMountedRef.current = false; };
   }, []);
 
-
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumber(e.target.value);
     setError("");
+    setIsRateLimited(false);
   };
 
   const handleOTPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateOTPState({ otp: e.target.value, otpError: "" });
   };
 
-  const sendOTPWithCaptcha = async (token: string) => {
+  const sendOTPWithCaptcha = useCallback(async (token: string) => {
     setError("");
     try {
       const result = await otpClientService.sendOTP(phoneNumber, token);
@@ -98,37 +99,41 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         updateOTPState({ otpSent: true });
         startTimers();
         setShowCaptcha(false);
-        setCaptchaError("");
+        setIsProcessing(false);
+        setIsRateLimited(false);
       } else {
-        setError(result.error || "Failed to send OTP");
-        // Since we are no longer using a ref, we can't reset the captcha from here.
-        // Instead, the user can use the retry button.
+        if (result.rateLimited) {
+          setError(`Rate limited: ${result.error}`);
+          setIsRateLimited(true);
+          setIsProcessing(false);
+        } else {
+          setError(result.error || "Failed to send OTP");
+          setShowCaptcha(false);
+          setIsProcessing(false);
+        }
       }
-    } catch (err) {
-      console.error('Error sending OTP:', err);
+    } catch (error) {
       if (isMountedRef.current) {
-        setError("An unexpected error occurred. Please try again.");
-      }
-    } finally {
-      if (isMountedRef.current) {
+        setError("An unexpected error occurred.");
+        setShowCaptcha(false);
         setIsProcessing(false);
       }
     }
-  };
+  }, [phoneNumber, updateOTPState, startTimers]);
 
-  const handleCaptchaError = (error: string) => {
+  const handleCaptchaError = useCallback((error: string) => {
     console.error('❌ LoginModal: CAPTCHA error received:', error);
     setCaptchaError(error);
     if (isMountedRef.current) {
       setIsProcessing(false);
     }
-  };
+  }, []);
 
-  const handleCaptchaVerify = (token: string) => {
+  const handleCaptchaVerify = useCallback((token: string) => {
     console.log('✅ LoginModal: CAPTCHA verified, proceeding to send OTP');
     setCaptchaError("");
     sendOTPWithCaptcha(token);
-  };
+  }, [sendOTPWithCaptcha]);
   
   const handlePhoneNumberSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -187,6 +192,9 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
     resetTimers();
     setShowCaptcha(false);
     setIsProcessing(false);
+    setIsRateLimited(false);
+    setError("");
+    setCaptchaError("");
   };
 
   const handleRetry = () => {
@@ -210,12 +218,32 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
           {showCaptcha ? (
             <div className="space-y-4 text-center">
               <p className="text-sm text-gray-600 mb-4">{isProcessing ? "Verifying you're human..." : ""}</p>
-              <TurnstileCaptcha
-                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
-                onVerify={handleCaptchaVerify}
-                onError={handleCaptchaError}
-              />
-              {captchaError && (
+              {isRateLimited ? (
+                <div className="space-y-2">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600 font-medium">Rate Limited</p>
+                    <p className="text-xs text-red-500 mt-1">Too many attempts. Please wait before trying again.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setError("");
+                      setIsRateLimited(false);
+                      setShowCaptcha(false);
+                      setIsProcessing(false);
+                    }} 
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Try with different phone number
+                  </button>
+                </div>
+              ) : (
+                <TurnstileCaptcha
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                  onVerify={handleCaptchaVerify}
+                  onError={handleCaptchaError}
+                />
+              )}
+              {captchaError && !isRateLimited && (
                 <div className="mt-2 space-y-2">
                   <p className="text-sm text-red-600">{captchaError}</p>
                   <button onClick={handleRetry} className="text-sm text-blue-600 hover:underline" disabled={isProcessing}>

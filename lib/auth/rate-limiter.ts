@@ -211,18 +211,18 @@ export class RateLimiter {
 
 // Pre-configured rate limiters for different use cases
 export const otpRateLimiter = new RateLimiter({
-  maxRequests: 8, // 8 attempts per window (increased from 3)
-  windowMs: 10 * 60 * 1000 // 10 minutes (reduced from 15)
+  maxRequests: 5, // 5 attempts per window (reduced from 8)
+  windowMs: 15 * 60 * 1000 // 15 minutes (increased from 10)
 })
 
 export const resendRateLimiter = new RateLimiter({
-  maxRequests: 5, // 5 resend attempts per window (increased from 2)
-  windowMs: 3 * 60 * 1000 // 3 minutes (reduced from 5)
+  maxRequests: 3, // 3 resend attempts per window (reduced from 5)
+  windowMs: 5 * 60 * 1000 // 5 minutes (increased from 3)
 })
 
 export const verifyRateLimiter = new RateLimiter({
-  maxRequests: 15, // 15 verification attempts per window (increased from 5)
-  windowMs: 15 * 60 * 1000 // 15 minutes (increased from 10)
+  maxRequests: 10, // 10 verification attempts per window (reduced from 15)
+  windowMs: 15 * 60 * 1000 // 15 minutes (unchanged)
 })
 
 // Clean up expired entries every 5 minutes (only in server environment)

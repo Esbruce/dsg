@@ -3,7 +3,8 @@
 import React, {
   useEffect,
   useRef,
-  useState
+  useState,
+  useCallback
 } from 'react'
 
 interface TurnstileCaptchaProps {
@@ -82,10 +83,28 @@ const TurnstileCaptcha = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
+  const widgetIdRef = useRef<string | null>(null);
+
+  // Memoize callback functions to prevent unnecessary re-renders
+  const handleVerify = useCallback((token: string) => {
+    console.log('✅ Turnstile CAPTCHA verified');
+    onVerify(token);
+  }, [onVerify]);
+
+  const handleError = useCallback(() => {
+    console.log('❌ Turnstile CAPTCHA error');
+    setHasError(true);
+    onError('CAPTCHA verification failed.');
+  }, [onError]);
+
+  const handleExpired = useCallback(() => {
+    console.log('⏰ Turnstile CAPTCHA expired');
+    setHasError(true);
+    onError('CAPTCHA expired.');
+  }, [onError]);
 
   useEffect(() => {
     let isMounted = true;
-    let widgetId: string | null = null;
     
     const initialize = async () => {
       if (!siteKey) {
@@ -100,33 +119,26 @@ const TurnstileCaptcha = ({
         await loadTurnstileScript();
         if (!isMounted || !containerRef.current) return;
         
+        // Clean up existing widget if it exists
+        if (widgetIdRef.current && window.turnstile) {
+          console.log(`🔍 TurnstileCaptcha: Cleaning up existing widget ${widgetIdRef.current}`);
+          window.turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        }
+        
         console.log('🔍 TurnstileCaptcha: Rendering widget...');
-        widgetId = window.turnstile.render(containerRef.current, {
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
           theme: 'light',
           appearance: 'always', // This makes the widget interactive
-          callback: (token: string) => {
-            console.log('✅ Turnstile CAPTCHA verified');
-            onVerify(token);
-          },
-          'error-callback': () => {
-            console.log('❌ Turnstile CAPTCHA error');
-            if(isMounted) {
-                setHasError(true);
-                onError('CAPTCHA verification failed.');
-            }
-          },
-          'expired-callback': () => {
-            console.log('⏰ Turnstile CAPTCHA expired');
-            if(isMounted) {
-                setHasError(true);
-                onError('CAPTCHA expired.');
-            }
-          }
+          callback: handleVerify,
+          'error-callback': handleError,
+          'expired-callback': handleExpired
         });
 
         if (isMounted) {
             setIsLoading(false);
+            setHasError(false);
         }
       } catch (error) {
         console.error('❌ TurnstileCaptcha initialization error:', error);
@@ -141,12 +153,13 @@ const TurnstileCaptcha = ({
 
     return () => {
       isMounted = false;
-      if (widgetId && window.turnstile) {
-        console.log(`🔍 TurnstileCaptcha: Cleaning up and removing widget ${widgetId}`);
-        window.turnstile.remove(widgetId);
+      if (widgetIdRef.current && window.turnstile) {
+        console.log(`🔍 TurnstileCaptcha: Cleaning up and removing widget ${widgetIdRef.current}`);
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
       }
     }
-  }, [siteKey, onVerify, onError]);
+  }, [siteKey, handleVerify, handleError, handleExpired]);
 
   return (
     <div className={className}>

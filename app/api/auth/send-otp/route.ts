@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (!captchaToken) {
+      return NextResponse.json(
+        { error: 'CAPTCHA verification is required' },
+        { status: 400 }
+      )
+    }
+
     // Check rate limit
     const rateLimitResult = await otpRateLimiter.check(req, phoneNumber)
     if (!rateLimitResult.allowed) {

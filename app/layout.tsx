@@ -19,7 +19,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Discharge Summary Generator",
-  description: "AI-powered medical notes summarization tool for healthcare professionals",
+  description: "AI-powered medical notes to discharge summarys and plans converter",
   icons: {
     icon: "/fav.png",
   },
