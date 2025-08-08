@@ -52,7 +52,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="w-full min-h-[calc(100vh-120px)] p-6 flex items-center justify-center">
-      <div className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm border border-[var(--color-neutral-300)] rounded-xl shadow-sm">
+      <div className="max-w-2xl mx-auto bg-[var(--color-bg-1)] border border-[var(--color-neutral-300)] shadow-symmetric rounded-xl shadow-sm">
         <div className="px-6 py-5 border-b border-[var(--color-neutral-200)]">
           <h1 className="text-2xl font-semibold text-gray-900">Feedback</h1>
           <p className="text-sm text-gray-600 mt-1">
