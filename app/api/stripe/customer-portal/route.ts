@@ -23,8 +23,21 @@ export async function POST(req: NextRequest) {
       .eq('id', authenticatedUserId)
       .single();
 
-    if (error || !userData || !userData.stripe_customer_id) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    if (error || !userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Ensure a Stripe customer exists for this user
+    let customerId = userData.stripe_customer_id as string | null;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        metadata: { user_id: authenticatedUserId },
+      });
+      customerId = customer.id;
+      await supabaseAdmin
+        .from('users')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', authenticatedUserId);
     }
 
     // Build a robust return URL that works in all environments
@@ -33,13 +46,21 @@ export async function POST(req: NextRequest) {
 
     // Create customer portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: userData.stripe_customer_id,
+      customer: customerId,
       return_url: `${baseUrl}/billing`,
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
-    console.error('Customer portal error:', err);
+    console.error('Customer portal error:', {
+      message: err?.message,
+      type: err?.type,
+      code: err?.code,
+      raw: err,
+    });
+    if (err?.type === 'StripeInvalidRequestError') {
+      return NextResponse.json({ error: err.message || 'Invalid request to Stripe' }, { status: 400 });
+    }
     return NextResponse.json({ 
       error: 'Failed to create portal session. Please try again.' 
     }, { status: 500 });
