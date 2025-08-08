@@ -6,7 +6,7 @@ export default function DesktopOnlyOverlay() {
       <div className="max-w-lg px-6">
         {/* Logo/Brand */}
         <div className="mb-2">
-          <h2 className="text-sm font-medium text-[var(--color-secondary)] uppercase tracking-widest mb-2">
+          <h2 className="text-sm font-medium text-[var(--color-primary)] uppercase tracking-widest mb-2">
             DSG
           </h2>
           <h1 className="text-lg font-semibold text-[var(--color-neutral-900)] tracking-tight">
@@ -27,7 +27,7 @@ export default function DesktopOnlyOverlay() {
 
         {/* Requirements */}
         <div className="bg-[var(--color-bg-2)] border border-[var(--color-neutral-200)] rounded-xl p-6 mb-8">
-          <h3 className="text-sm font-medium text-[var(--color-secondary)] mb-4 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-[var(--color-primary)] mb-4 uppercase tracking-wide">
             System Requirements
           </h3>
           <div className="space-y-3">
@@ -51,7 +51,7 @@ export default function DesktopOnlyOverlay() {
           Need assistance?{" "}
           <a 
             href="mailto:revivewebsites@outlook.com" 
-            className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors duration-200 underline underline-offset-2"
+            className="text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors duration-200 underline underline-offset-2"
           >
             Contact support
           </a>

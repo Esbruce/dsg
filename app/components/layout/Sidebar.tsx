@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Usage from "../ui/widgets/Usage";
 import Plan from "../ui/widgets/Plan";
 import Invite from "../ui/widgets/Invite";
@@ -62,17 +63,21 @@ export default function Sidebar({
   return (
     <aside className="w-80 h-full bg-[var(--color-bg-5)] border-r border-[var(--color-neutral-300)] flex flex-col">
       {/* Branding */}
-      <div className="p-6 flex-shrink-0">
-        <div className="flex items-center gap-3 justify-center">
-          <div>
-            <h1 className="text-xl text-center font-bold text-gray-900">DSG</h1>
-            <p className="text-sm text-gray-600">Discharge Summary Generator</p>
-          </div>
+      <div className="p-6 flex justify-center">
+        <div className="relative w-full h-16 md:h-20">
+          <Image
+            src="/dsg_brand.jpg"
+            alt="DSG — Discharge Summary Generator"
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 20rem"
+            className="object-contain"
+          />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <div className="flex-1 border-t border-[var(--color-neutral-300)] p-6 space-y-6 overflow-y-auto">
         {showSkeletons ? (
           <>
             <UsageSkeleton />
