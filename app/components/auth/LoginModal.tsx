@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useRef, useEffect, useCallb
 import { useRouter } from 'next/navigation';
 import PhoneInput from './PhoneInput';
 import CodeInput from './CodeInput';
-import SuccessMessage from './SuccessMessage';
 import TurnstileCaptcha from './TurnstileCaptcha';
 import { otpClientService, useOTPState, useOTPTimers } from '@/lib/auth/otp-client';
 import { createUserWithReferral } from '@/lib/auth/referral-client';
@@ -151,20 +150,26 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
       if (!isMountedRef.current) return;
       
       if (result.success) {
-        updateOTPState({ isOTPVerified: true, otpProcessing: false });
+        // Do not show an intermediate success view; proceed to redirect immediately
+        updateOTPState({ otpProcessing: false });
         try { await createUserWithReferral(); } catch (referralError) { console.error('Error handling referral:', referralError); }
         
-        onAuthSuccess?.();
-        
-        const intent = getRequestIntent();
-        const currentPath = window.location.pathname;
-        const targetPath = (intent && intent.payload.type === 'navigate' && intent.payload.path !== currentPath && intent.payload.path !== '/') ? intent.payload.path : null;
+        // If parent provided a handler, delegate post-auth navigation to it
+        if (onAuthSuccess) {
+          // Delegate post-auth navigation to parent (do not clear intent here)
+          onAuthSuccess();
+        } else {
+          // Default behavior: respect stored intent for navigation
+          const intent = getRequestIntent();
+          const currentPath = window.location.pathname;
+          const targetPath = (intent && intent.payload.type === 'navigate' && intent.payload.path !== currentPath && intent.payload.path !== '/') ? intent.payload.path : null;
 
-        clearRequestIntent();
-        setTimeout(() => {
-          if (targetPath) router.push(targetPath);
-          onClose?.();
-        }, 1000);
+          clearRequestIntent();
+          setTimeout(() => {
+            if (targetPath) router.push(targetPath);
+            onClose?.();
+          }, 1000);
+        }
 
       } else {
         updateOTPState({ otpError: result.error || "Verification failed", otpProcessing: false });
@@ -211,9 +216,7 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
         <p className="text-gray-600">Please authenticate to continue</p>
       </div>
       
-      {otpState.isOTPVerified ? (
-        <SuccessMessage />
-      ) : !otpState.otpSent ? (
+      {!otpState.otpSent ? (
         <>
           {showCaptcha ? (
             <div className="space-y-4 text-center">

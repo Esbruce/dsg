@@ -73,15 +73,19 @@ export default function Header() {
   const handleSignInClick = () => {
     setRequestIntent({ type: "navigate", path: "/" });
     setIsDropdownOpen(false);
-    showInlineLoginModal();
+    // Redirect to dedicated login page with returnTo=current path
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/'
+    const encoded = encodeURIComponent(currentPath || '/')
+    router.push(`/login?returnTo=${encoded}`);
   };
 
-  const handleBillingClick = () => {
+  const handleAccountClick = () => {
     if (isAuthenticated) {
-      router.push("/billing");
+      router.push("/account");
     } else {
-      setRequestIntent({ type: "navigate", path: "/billing" });
-      showInlineLoginModal();
+      setRequestIntent({ type: "navigate", path: "/account" });
+      // Send unauthenticated users to login with returnTo
+      router.push('/login?returnTo=%2Faccount');
     }
   };
 
@@ -103,15 +107,17 @@ export default function Header() {
             Home
           </button>
           <button
-            onClick={handleBillingClick}
+            onClick={() => router.push("/feedback")}
             className="text-[var(--color-neutral-800)] hover:text-[var(--color-neutral-600)] transition-colors font-medium"
           >
-            Billing
+            Feedback
           </button>
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={toggleDropdown}
+              onClick={handleAccountClick}
               className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              aria-label="Account"
+              title="Account"
             >
               <svg
                 width="20"

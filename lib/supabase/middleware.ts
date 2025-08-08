@@ -54,13 +54,16 @@ export async function updateSession(request: NextRequest) {
   // Only protect specific routes that require authentication
   if (
     !user &&
-    (request.nextUrl.pathname.startsWith('/billing') ||
+    (request.nextUrl.pathname.startsWith('/account') ||
      request.nextUrl.pathname.startsWith('/settings'))
   ) {
-    // Redirect to main page where LoginModal will be triggered
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
+    // Redirect unauthenticated users to dedicated login page with safe returnTo
+    const currentPathWithQuery = `${request.nextUrl.pathname}${request.nextUrl.search}`
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    loginUrl.search = ''
+    loginUrl.searchParams.set('returnTo', currentPathWithQuery)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Check if user session is expired (15-minute timeout)

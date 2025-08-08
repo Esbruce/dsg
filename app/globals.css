@@ -12,7 +12,7 @@
   /* Primary Colors */
 --color-primary: #01a5a5;      /* Your current teal */
 --color-primary-dark: #03A1AC;
---color-primary-light: #06bebe;
+--color-primary-light: #09f0f0;
 --color-blocked: #eeeeee;
 
 --color-process-1: #06fffb;
@@ -29,7 +29,7 @@
 --color-neutral-50: #F8FAFC;
 --color-neutral-100: #F1F5F9;
 --color-neutral-200: #E2E8F0;
---color-neutral-300: #cccdcf;
+--color-neutral-300: #cbcaca;
 --color-neutral-400: #94A3B8;
 --color-neutral-500: #64748B;
 --color-neutral-600: #475569;
@@ -43,11 +43,11 @@
 --color-error: #EF4444;
 --color-info: #3B82F6;
 
---color-bg-1: #ffffff;
---color-bg-2: #f4fcfc;
---color-bg-3: #f7faff;
+--color-bg-1: #fffffffa;
+--color-bg-2: #f4fafa;
+--color-bg-3: #f1f9fe;
 --color-bg-4: #ffffffa9;
---color-bg-5: #94A3B8;
+--color-bg-5: #ffffff;
 --color-bg-6: #64748B;
 --color-bg-7: #00275e;
 
@@ -271,7 +271,7 @@ button:disabled {
 
 /* Custom symmetric shadow */
 .shadow-symmetric {
-  box-shadow: 0 0 5px rgba(63, 63, 63, 0.041), 0 0 40px rgba(1, 104, 90, 0.096);
+  box-shadow: 0 0 5px rgba(63, 63, 63, 0.041), 0 0 40px rgba(1, 104, 90, 0.041);
 }
 
 /* Desktop-only viewport restriction */

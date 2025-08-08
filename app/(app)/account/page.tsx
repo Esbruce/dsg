@@ -8,7 +8,9 @@ import { useUserData } from "../../../lib/hooks/useUserData";
 import { SubscriptionData } from "../../../lib/types/billing";
 
 // Components
-import BillingHeader from "../../components/billing/BillingHeader";
+import AccountOverview from "../../components/account/AccountOverview";
+import AccountQuickActions from "../../components/account/AccountQuickActions";
+import SectionHeader from "../../components/account/SectionHeader";
 import BillingSkeleton from "../../components/billing/BillingSkeleton";
 import ErrorState from "../../components/billing/ErrorState";
 import UpgradeCard from "../../components/billing/UpgradeCard";
@@ -17,7 +19,7 @@ import PaymentMethod from "../../components/billing/PaymentMethod";
 import BillingActions from "../../components/billing/BillingActions";
 import ReferralDashboard from "../../components/billing/ReferralDashboard";
 
-export default function BillingPage() {
+export default function AccountPage() {
   // Local state (subscription data only)
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
@@ -25,17 +27,15 @@ export default function BillingPage() {
   const [cancelling, setCancelling] = useState(false);
 
   // Context data
-  const { isPaid, isLoading, isAuthenticated, refreshUserData, refreshAll } = useUserData();
+  const { isPaid, isLoading, isAuthenticated, userIdentifier, refreshUserData, refreshAll } = useUserData();
 
   // Hooks
   const router = useRouter();
 
   // Effects
   useEffect(() => {
-    // Client-side guard: unauthenticated users should not be on billing
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/");
-    }
+    // With server-side middleware redirecting unauthenticated users to /login,
+    // this client-side redirect is no longer necessary. Keep a no-op for safety.
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
@@ -164,15 +164,24 @@ export default function BillingPage() {
   // Main render
   return (
     <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <BillingHeader />
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex flex-col gap-4 mb-8">
+          <h1 className="text-3xl text-[var(--color-neutral-800)] font-bold">Account Settings</h1>
+        </div>
 
+        {/* Account Info */}
+        <SectionHeader title="User" />
+        <div className="flex flex-col gap-4 mb-8">
+          <AccountOverview isLoading={isLoading} userIdentifier={userIdentifier} isPaid={isPaid} />
+        </div>
+
+        {/* Billing & Subscription */}
+        <SectionHeader title="Billing & Subscription" className="mb-6" />
         {isLoading ? (
           <BillingSkeleton />
         ) : !isPaid ? (
           <div className="space-y-6">
             <UpgradeCard onUpgrade={handleUpgrade} />
-            <ReferralDashboard />
           </div>
         ) : (
           <div className="space-y-6">
@@ -192,10 +201,14 @@ export default function BillingPage() {
               onManagePayment={handleManagePayment}
               onCancelSubscription={handleCancelSubscription}
             />
-
-            <ReferralDashboard />
           </div>
         )}
+
+        {/* Invite Friends */}
+        <div className="mt-10">
+          <SectionHeader title="Invite Friends" description="Share DSG with colleagues and unlock discounts." />
+          <ReferralDashboard />
+        </div>
       </div>
     </div>
   );

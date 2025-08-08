@@ -17,13 +17,13 @@ export default function UpgradeCard({ onUpgrade }: UpgradeCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-8 text-center">
       <div className="mb-6">
-        <div className="w-16 h-16 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-[var(--color-primary)] text-white rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-gray-600" fill="none" stroke="white" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Upgrade to Pro</h2>
-        <p className="text-gray-600">Get unlimited access to all features</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Upgrade to Unlimited</h2>
+        <p className="text-gray-600">Overcome your work faster</p>
       </div>
 
       {/* Discount Badge */}

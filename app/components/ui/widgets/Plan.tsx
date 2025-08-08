@@ -32,12 +32,16 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated, isLoading
         <p className="text-sm text-green-100 mb-3">
           You have unlimited access to all features
         </p>
-        <button 
-          onClick={() => isAuthenticated && !isLoading ? router.push('/billing') : showInlineLoginModal()}
+      <button 
+        onClick={() => {
+          if (isAuthenticated && !isLoading) return router.push('/account')
+          const encoded = encodeURIComponent('/account')
+          router.push(`/login?returnTo=${encoded}`)
+        }}
           disabled={isLoading}
           className="w-full bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-3 rounded-lg transition-colors text-sm"
         >
-          {isLoading ? 'Loading...' : 'Manage Billing'}
+          {isLoading ? 'Loading...' : 'Manage Account'}
         </button>
       </div>
     );
@@ -112,9 +116,13 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated, isLoading
       </div>
 
       <button 
-        onClick={() => isAuthenticated ? onGoUnlimited() : showInlineLoginModal()}
+        onClick={() => {
+          if (isAuthenticated) return onGoUnlimited()
+          const encoded = encodeURIComponent('/account')
+          router.push(`/login?returnTo=${encoded}&intent=upgrade`)
+        }}
         disabled={isAuthenticated && discountLoading}
-        className="w-full bg-white text-[var(--color-primary)] font-bold py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-md disabled:opacity-50"
+        className="w-full bg-white text-[var(--color-primary)] font-bold py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-200 "
       >
         {isAuthenticated && discountLoading ? 'Loading...' : 'Upgrade Now'}
       </button>

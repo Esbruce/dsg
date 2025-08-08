@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import InputSection from "../components/ui/generator/InputSection";
 import OutputSection from "../components/ui/generator/OutputSection";
 import LoadingState from "../components/ui/LoadingState";
@@ -45,13 +45,10 @@ export default function Home() {
   useEffect(() => {
     isLoadingRef.current = isLoading;
   }, [isLoading]);
-  const {
-    showInlineLoginModal,
-    isInlineLoginModalOpen,
-    hideInlineLoginModal,
-  } = useLoginModal();
+  const { isInlineLoginModalOpen, hideInlineLoginModal } = useLoginModal();
   const { setRequestIntent, getRequestIntent, clearRequestIntent, intent } =
     useRequestIntent();
+  const router = useRouter();
 
   const handleProcess = useCallback(async () => {
     if (!medicalNotes.trim()) {
@@ -60,17 +57,14 @@ export default function Home() {
     }
 
     if (!isAuthenticated) {
-      console.log(
-        "User not authenticated. Setting intent and showing login modal."
-      );
+      // Preserve user intent and redirect to dedicated login page
       const intent = {
         type: "action" as const,
         name: "generate_summary",
         payload: { medicalNotes },
       };
-      console.log("🎯 Setting intent:", intent);
       setRequestIntent(intent);
-      showInlineLoginModal();
+      router.push('/login?returnTo=%2F');
       return;
     }
 
@@ -175,7 +169,6 @@ export default function Home() {
   }, [
     medicalNotes,
     isAuthenticated,
-    showInlineLoginModal,
     refreshUserData,
     isLoading,
     setRequestIntent,
@@ -186,13 +179,11 @@ export default function Home() {
     handleProcessRef.current = handleProcess;
   }, [handleProcess]);
 
-  // Handle authentication change - hide inline modal and auto-process
+  // After login on a dedicated page, auto-run generation when returning with intent
   useEffect(() => {
-    console.log("🔍 Auth effect triggered:", { isAuthenticated, isInlineLoginModalOpen, isLoading });
+    console.log("🔍 Auth effect triggered:", { isAuthenticated, isLoading });
     
-    if (isAuthenticated && isInlineLoginModalOpen && !autoProcessStartedRef.current) {
-      console.log("🔄 User authenticated, hiding modal and checking for auto-process...");
-      
+    if (isAuthenticated && !autoProcessStartedRef.current) {
       const requestIntent = getRequestIntent();
       console.log("🎯 Retrieved intent:", requestIntent);
       
@@ -205,35 +196,20 @@ export default function Home() {
         const { payload } = requestIntent.payload as ActionIntent<{
           medicalNotes: string;
         }>;
-        console.log("📄 Intent payload:", payload);
         
         if (payload && payload.medicalNotes) {
-          console.log("📝 Setting medical notes from intent:", payload.medicalNotes);
           setMedicalNotes(payload.medicalNotes);
-          
-          // Mark that we've started auto-processing
           autoProcessStartedRef.current = true;
           
-          // Wait for user data to be fully loaded before processing
           const waitForUserData = async () => {
             console.log("⏳ Waiting for user data to load before auto-processing...");
-            console.log("🔍 Current isLoading state:", isLoadingRef.current);
-            
-            // Use a more reliable approach - wait for the next render cycle where isLoading is false
             const checkLoading = () => {
               return new Promise<void>((resolve) => {
                 let attempts = 0;
-                const maxAttempts = 50; // 5 seconds max
-                
+                const maxAttempts = 50;
                 const check = () => {
                   attempts++;
-                  console.log(`🔍 Check attempt ${attempts}: isLoading = ${isLoadingRef.current}`);
-                  
-                  if (!isLoadingRef.current) {
-                    console.log("✅ User data loaded, starting auto-process...");
-                    resolve();
-                  } else if (attempts >= maxAttempts) {
-                    console.log("❌ Max attempts reached, proceeding anyway...");
+                  if (!isLoadingRef.current || attempts >= maxAttempts) {
                     resolve();
                   } else {
                     setTimeout(check, 100);
@@ -242,24 +218,15 @@ export default function Home() {
                 check();
               });
             };
-            
             try {
               await checkLoading();
-              console.log("🎯 checkLoading completed, setting timeout for handleProcess...");
-              
-              // Additional small delay to ensure state propagation
               setTimeout(() => {
-                console.log("🚀 Calling handleProcess for auto-processing...");
                 try {
-                  if (handleProcessRef.current) {
-                    handleProcessRef.current();
-                    console.log("✅ handleProcess called successfully");
-                  }
+                  handleProcessRef.current?.();
                 } catch (error) {
                   console.error("❌ Error calling handleProcess:", error);
                 }
                 clearRequestIntent();
-                // Reset the ref after processing
                 autoProcessStartedRef.current = false;
               }, 200);
             } catch (error) {
@@ -269,21 +236,12 @@ export default function Home() {
           };
           
           waitForUserData();
-        } else {
-          console.log("❌ No medical notes found in intent payload");
         }
-      } else {
-        console.log("❌ No generate_summary intent found or invalid intent:", requestIntent);
       }
-      
-      // Hide the modal after processing the intent
-      hideInlineLoginModal();
     }
   }, [
     isAuthenticated,
-    isInlineLoginModalOpen,
     isLoading,
-    hideInlineLoginModal,
     getRequestIntent,
     clearRequestIntent,
   ]);

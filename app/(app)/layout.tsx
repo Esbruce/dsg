@@ -5,8 +5,7 @@ import { createClient } from "../../lib/supabase/client";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
 import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
-import { LoginModalProvider } from "../components/auth";
-import { SessionTimeoutWarning } from "../components/auth/SessionTimeoutWarning";
+import { LoginModalProvider, SessionTimeoutHandler } from "../components/auth";
 import { processReferralUUIDFromURL } from "../../lib/auth/referral-utils";
 import { useRequestIntent } from "../../lib/hooks/useRequestIntent";
 import { UserDataContext, UserDataContextType } from "../../lib/hooks/useUserData";
@@ -332,8 +331,8 @@ export default function AppLayout({
           </div>
         </div>
 
-        {/* Session Timeout Warning */}
-        <SessionTimeoutWarning />
+        {/* Session Timeout (headless) */}
+        {isAuthenticated && <SessionTimeoutHandler />}
       </UserDataContext.Provider>
     </LoginModalProvider>
   );

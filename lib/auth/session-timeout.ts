@@ -92,8 +92,15 @@ export class SessionTimeoutManager {
       const supabase = createClient()
       const { data: { session }, error } = await supabase.auth.getSession()
       
-      if (error || !session) {
-        console.error('Session refresh failed:', error)
+      // If there's an actual error fetching the session, log and stop.
+      if (error) {
+        console.error('Session refresh error on getSession:', error)
+        return false
+      }
+
+      // If no session exists (user not authenticated or not hydrated yet),
+      // treat as a no-op instead of an error to avoid noisy logs.
+      if (!session) {
         return false
       }
 
