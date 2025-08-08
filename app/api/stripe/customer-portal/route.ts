@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Ensure a Stripe customer exists for this user
+    // Ensure a Stripe customer exists for this user and belongs to the current Stripe env
     let customerId = userData.stripe_customer_id as string | null;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -38,6 +38,31 @@ export async function POST(req: NextRequest) {
         .from('users')
         .update({ stripe_customer_id: customerId })
         .eq('id', authenticatedUserId);
+    } else {
+      // Verify the customer exists in this Stripe environment; if not, recreate
+      try {
+        const existing = await stripe.customers.retrieve(customerId);
+        if ((existing as any)?.deleted) {
+          throw new Error('Stripe customer marked as deleted');
+        }
+      } catch (verifyErr: any) {
+        // If the customer doesn't exist in this environment/account, create a fresh one
+        const shouldRecreate =
+          verifyErr?.type === 'StripeInvalidRequestError' && verifyErr?.code === 'resource_missing';
+        if (shouldRecreate || verifyErr?.message?.includes('No such customer')) {
+          const newCustomer = await stripe.customers.create({
+            metadata: { user_id: authenticatedUserId },
+          });
+          customerId = newCustomer.id;
+          await supabaseAdmin
+            .from('users')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', authenticatedUserId);
+        } else {
+          // Unknown verification error; bubble up to outer handler
+          throw verifyErr;
+        }
+      }
     }
 
     // Build a robust return URL that works in all environments

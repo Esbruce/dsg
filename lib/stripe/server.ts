@@ -1,8 +1,7 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
-});
+// Use account default API version in production to avoid invalid version issues
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export function validateStripeConfig() {
   const missing = [];

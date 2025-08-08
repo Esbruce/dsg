@@ -25,12 +25,19 @@ export default function BillingPage() {
   const [cancelling, setCancelling] = useState(false);
 
   // Context data
-  const { isPaid, isLoading, refreshUserData, refreshAll } = useUserData();
+  const { isPaid, isLoading, isAuthenticated, refreshUserData, refreshAll } = useUserData();
 
   // Hooks
   const router = useRouter();
 
   // Effects
+  useEffect(() => {
+    // Client-side guard: unauthenticated users should not be on billing
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
   useEffect(() => {
     // Only fetch subscription details if user is paid and data is loaded
     if (!isLoading && isPaid && !subscriptionData) {
