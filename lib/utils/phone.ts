@@ -118,16 +118,8 @@ export function formatUKPhoneForDisplay(phone: string): string {
   
   const numberPart = phone.substring(3) // Remove +44
   
-  // Format based on length
-  if (numberPart.length === 10) {
-    // Mobile number: 07849 484659
-    return `+44 ${numberPart.substring(0, 4)} ${numberPart.substring(4, 6)} ${numberPart.substring(6)}`
-  } else if (numberPart.length === 9) {
-    // Landline number: 020 7946 0958
-    return `+44 ${numberPart.substring(0, 3)} ${numberPart.substring(3, 6)} ${numberPart.substring(6)}`
-  }
-  
-  return phone
+  // Format with only one space after +44
+  return `+44 ${numberPart}`
 }
 
 /**
