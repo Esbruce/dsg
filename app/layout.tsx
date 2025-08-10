@@ -19,7 +19,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Discharge Summary Generator",
-  description: "AI-powered medical notes summarization tool for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
+  description: "AI-powered discharge summary generator for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
   keywords: ["discharge summary", "medical notes", "healthcare", "AI", "medical documentation", "patient care", "healthcare professionals"],
   authors: [{ name: "Discharge Summary Generator" }],
   creator: "Discharge Summary Generator",
@@ -42,10 +42,10 @@ export const metadata: Metadata = {
     url: "https://dischargesummarygenerator.website",
     siteName: "Discharge Summary Generator",
     title: "Discharge Summary Generator - AI-Powered Medical Notes Summarization",
-    description: "AI-powered medical notes summarization tool for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
+    description: "AI-powered discharge summary generator for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
     images: [
       {
-        url: "/dsg_brand.jpg",
+        url: "/favicon.ico",
         width: 1200,
         height: 630,
         alt: "Discharge Summary Generator - AI-Powered Medical Documentation Tool",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Discharge Summary Generator - AI-Powered Medical Notes Summarization",
-    description: "AI-powered medical notes summarization tool for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
+    description: "AI-powered discharge summary generator for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
     images: ["/dsg_brand.jpg"],
     creator: "@dischargesummarygen",
   },
