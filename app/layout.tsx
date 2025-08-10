@@ -35,15 +35,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico?v=3", sizes: "any" },
-      { url: "/favicon-16x16.png?v=3", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png?v=3", sizes: "32x32", type: "image/png" },
-    ],
-    apple: "/apple-touch-icon.png?v=3",
-    shortcut: "/favicon.ico?v=3",
-  },
+  manifest: "/site.webmanifest?v=3",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -68,7 +60,7 @@ export const metadata: Metadata = {
     creator: "@dischargesummarygen",
   },
   verification: {
-    google: "your-google-verification-code", // Replace with your actual Google verification code
+    google: "your-google-verification-code",
   },
   alternates: {
     canonical: "https://dischargesummarygenerator.website",
@@ -82,13 +74,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
-        <link rel="icon" href="/favicon-16x16.png?v=3" type="image/png" sizes="16x16" />
-        <link rel="icon" href="/favicon-32x32.png?v=3" type="image/png" sizes="32x32" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-        <link rel="manifest" href="/site.webmanifest?v=3" />
-      </head>
+      <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
         suppressHydrationWarning={true}
