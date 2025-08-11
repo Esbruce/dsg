@@ -63,8 +63,8 @@ export default function Sidebar({
   return (
     <aside className="w-80 h-full bg-[var(--color-bg-5)] border-r border-[var(--color-neutral-300)] flex flex-col">
       {/* Branding */}
-      <div className="p-6 flex justify-center">
-        <div className="relative w-full h-16 md:h-20">
+      <div className="p-4 flex justify-center">
+        <div className="relative w-full h-20">
           <Image
             src="/dsg_brand.jpg"
             alt="DSG — Discharge Summary Generator"
