@@ -70,6 +70,26 @@ export default function PhoneInput({ phoneNumber, onPhoneNumberChange, onSubmit,
         )}
       </div>
 
+      <p className="text-xs text-gray-500">
+        By using DSG you are accepting the{' '}
+        <a
+          href="/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--color-primary)] hover:underline"
+        >
+          Terms of Service
+        </a>{' '}and{' '}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--color-primary)] hover:underline"
+        >
+          Privacy Policy
+        </a>.
+      </p>
+
       <button
         type="submit"
         disabled={isProcessing || !isFormValid}

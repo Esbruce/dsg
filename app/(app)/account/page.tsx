@@ -25,6 +25,10 @@ export default function AccountPage() {
   const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Context data
   const { isPaid, isLoading, isAuthenticated, userIdentifier, refreshUserData, refreshAll } = useUserData();
@@ -128,31 +132,62 @@ export default function AccountPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? You will still have access until the end of your current billing period.')) {
-      return;
-    }
+    setShowCancelModal(true);
+  };
 
+  const confirmCancelSubscription = async () => {
     setCancelling(true);
     try {
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: "include",
-        body: JSON.stringify({ cancel_immediately: false }),  // Only non-sensitive data
+        body: JSON.stringify({ cancel_immediately: false }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to cancel subscription');
       }
 
-      // Refresh all data and fetch updated subscription details
       await refreshAll();
       await fetchSubscriptionDetails();
+      setShowCancelModal(false);
       alert('Your subscription has been scheduled for cancellation at the end of your current billing period.');
     } catch (err) {
       alert('Error cancelling subscription: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (confirmText !== 'DELETE') return;
+    setDeleting(true);
+    try {
+      const response = await fetch('/api/user/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete account');
+      }
+
+      setShowDeleteModal(false);
+      alert('Your account has been deleted.');
+      window.location.href = '/';
+    } catch (err) {
+      alert('Error deleting account: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setDeleting(false);
+      setConfirmText('');
     }
   };
 
@@ -209,6 +244,119 @@ export default function AccountPage() {
           <SectionHeader title="Invite Friends" description="Share DSG with colleagues and unlock discounts." />
           <ReferralDashboard />
         </div>
+
+        {/* Legal */}
+        <div className="mt-10">
+          <SectionHeader title="Legal" description="Policies and terms for using DSG." />
+          <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
+            <p className="text-sm text-[var(--color-neutral-700)]">
+              Review our
+              {' '}<a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-primary)] hover:underline"
+              >
+                Terms of Service
+              </a>
+              {' '}and{' '}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-primary)] hover:underline"
+              >
+                Privacy Policy
+              </a>.
+            </p>
+          </div>
+        </div>
+
+        {/* Account and data removal */}
+        <div className="mt-10">
+          <SectionHeader title="Account and Data Removal" description="Permanently remove your account, subscription, and associated data." />
+          <div className="bg-white rounded-xl shadow-symmetric border border-red-300 p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-red-700">Delete account</h3>
+                <p className="text-sm text-red-600 mt-1">This will permanently delete your account, cancel your subscription immediately, and remove your data. This action cannot be undone.</p>
+              </div>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete account'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete confirmation modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => { if (!deleting) { setShowDeleteModal(false); setConfirmText(''); } }} />
+            <div className="relative bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] w-full max-w-md p-6">
+              <h4 className="text-lg font-semibold text-[var(--color-neutral-900)]">Confirm account deletion</h4>
+              <p className="text-sm text-[var(--color-neutral-700)] mt-2">
+                This will permanently delete your account, cancel your subscription immediately, and remove your data. Type <span className="font-mono font-semibold">DELETE</span> to confirm.
+              </p>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                className="mt-4 w-full border border-[var(--color-neutral-300)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-[var(--color-neutral-900)] placeholder-[var(--color-neutral-400)]"
+                placeholder="Type DELETE"
+                disabled={deleting}
+              />
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => { if (!deleting) { setShowDeleteModal(false); setConfirmText(''); } }}
+                  className="px-4 py-2 rounded-lg border border-[var(--color-neutral-300)] text-[var(--color-neutral-700)] hover:bg-[var(--color-neutral-100)]"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteAccount}
+                  disabled={confirmText !== 'DELETE' || deleting}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-60 hover:bg-red-700"
+                >
+                  {deleting ? 'Deleting…' : 'Confirm delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cancel subscription confirmation modal */}
+        {showCancelModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => { if (!cancelling) { setShowCancelModal(false); } }} />
+            <div className="relative bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] w-full max-w-md p-6">
+              <h4 className="text-lg font-semibold text-[var(--color-neutral-900)]">Cancel subscription</h4>
+              <p className="text-sm text-[var(--color-neutral-700)] mt-2">
+                Are you sure you want to cancel your subscription? You will still have access until the end of your current billing period.
+              </p>
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => { if (!cancelling) { setShowCancelModal(false); } }}
+                  className="px-4 py-2 rounded-lg border border-[var(--color-neutral-300)] text-[var(--color-neutral-700)] hover:bg-[var(--color-neutral-100)]"
+                  disabled={cancelling}
+                >
+                  Keep subscription
+                </button>
+                <button
+                  onClick={confirmCancelSubscription}
+                  disabled={cancelling}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-60 hover:bg-red-700"
+                >
+                  {cancelling ? 'Cancelling…' : 'Cancel subscription'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

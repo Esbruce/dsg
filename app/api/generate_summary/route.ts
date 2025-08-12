@@ -204,21 +204,6 @@ Additional instructions:
         const dischargePlanData = await dischargePlanRes.json();
         const dischargePlan = (dischargePlanData.choices?.[0]?.message?.content as string) || '';
 
-        // Insert into Supabase (store original medical_notes for record keeping)
-        const { error: insertError } = await supabaseAdmin
-            .from('records')
-            .insert([{
-                user_id,
-                medical_notes: original_medical_notes,
-                summary,
-                discharge_plan: dischargePlan,
-                responses: null,
-            }]);
-
-        if (insertError) {
-            throw new Error(`Database insert failed: ${insertError.message}`);
-        }
-
         return NextResponse.json({ summary, discharge_plan: dischargePlan });
 
     } catch (error) {
