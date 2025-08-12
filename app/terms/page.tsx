@@ -42,6 +42,8 @@ export default function TermsOfServicePage() {
             <ul className="mt-2 list-disc pl-6 space-y-2">
               <li>Paid features are billed via Stripe. We do not store full card details on our servers.</li>
               <li>Cancellations take effect at the end of the current billing period unless stated otherwise.</li>
+              <li>Discounts for invitees are only valid upon the successful sign up of your invitee.</li>
+              <li>Invite discounts may be revoked if the invitee cancels their subscription.</li>
             </ul>
           </section>
 
