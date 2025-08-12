@@ -234,11 +234,7 @@ export class ClientAuthService {
             authStateResolved = true;
             subscription.unsubscribe();
             
-            resolve({ 
-              success: true, 
-              session,
-              isNewUser: true // Assume new user for signup flow
-            });
+            resolve({ success: true, session });
           }
         });
         
@@ -269,11 +265,7 @@ export class ClientAuthService {
           authStateResolved = true;
           subscription.unsubscribe();
           
-          resolve({ 
-            success: true, 
-            session,
-            isNewUser: true // Assume new user for signup flow
-          });
+          resolve({ success: true, session });
           return;
         }
 

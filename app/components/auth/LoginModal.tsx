@@ -152,7 +152,11 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
       if (result.success) {
         // Do not show an intermediate success view; proceed to redirect immediately
         updateOTPState({ otpProcessing: false });
-        try { await createUserWithReferral(); } catch (referralError) { console.error('Error handling referral:', referralError); }
+
+        // Kick off referral/user creation in the background so we don't block navigation
+        createUserWithReferral().catch((referralError) => {
+          console.error('Error handling referral:', referralError);
+        });
         
         // If parent provided a handler, delegate post-auth navigation to it
         if (onAuthSuccess) {
@@ -165,10 +169,8 @@ export default function LoginModal({ onClose, onAuthSuccess }: LoginModalProps) 
           const targetPath = (intent && intent.payload.type === 'navigate' && intent.payload.path !== currentPath && intent.payload.path !== '/') ? intent.payload.path : null;
 
           clearRequestIntent();
-          setTimeout(() => {
-            if (targetPath) router.push(targetPath);
-            onClose?.();
-          }, 1000);
+          if (targetPath) router.push(targetPath);
+          onClose?.();
         }
 
       } else {

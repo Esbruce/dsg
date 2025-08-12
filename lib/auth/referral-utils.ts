@@ -97,10 +97,9 @@ export function getReferralUUIDForUserCreation(): string | null {
   const referralUUID = getStoredReferralCode();
   
   if (referralUUID && validateReferralUUID(referralUUID)) {
-    // Clear the stored UUID after retrieving it
-    clearStoredReferralCode();
+    // Do NOT clear here; defer clearing until server confirms success
     return referralUUID;
   }
   
   return null;
-} 
+}

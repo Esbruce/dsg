@@ -47,6 +47,12 @@ export async function createUserWithReferral(): Promise<{ success: boolean; erro
       throw new Error(error.error || 'Failed to create user');
     }
 
+    // Only clear referral after successful server confirmation
+    try { 
+      const { clearStoredReferralCode } = await import('./referral-utils');
+      clearStoredReferralCode();
+    } catch {}
+
     return { success: true };
   } catch (error) {
     console.error('Error creating user with referral:', error);

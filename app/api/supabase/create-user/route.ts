@@ -35,19 +35,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (existingUser) {
-      console.log('✅ Create user: User already exists in database, updating referral if needed');
-      // User already exists, just update the referred_by field if provided
-      if (referred_by) {
-        const { error: updateError } = await supabaseAdmin
+      console.log('✅ Create user: User already exists in database, updating referral if allowed');
+      // Write-once referral semantics and self-referral guard
+      if (referred_by && referred_by !== authenticatedUserId) {
+        // Only set referral if currently null
+        const { data: currentUser } = await supabaseAdmin
           .from('users')
-          .update({ referred_by })
-          .eq('id', authenticatedUserId);
+          .select('referred_by')
+          .eq('id', authenticatedUserId)
+          .single();
 
-        if (updateError) {
-          console.error('❌ Create user: Error updating user referral:', updateError);
-          return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
+        if (!currentUser?.referred_by) {
+          const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({ referred_by })
+            .eq('id', authenticatedUserId);
+
+          if (updateError) {
+            console.error('❌ Create user: Error updating user referral:', updateError);
+            return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
+          }
+          console.log('✅ Create user: Set referral for existing user:', { userId: authenticatedUserId, referred_by });
         }
-        console.log('✅ Create user: Updated referral for existing user:', { userId: authenticatedUserId, referred_by });
       }
       
       return NextResponse.json({ success: true, message: 'User already exists' });
@@ -56,9 +65,10 @@ export async function POST(req: NextRequest) {
     console.log('📝 Create user: Creating new user record in database:', { userId: authenticatedUserId, referred_by });
 
     // Create new user record
+    const safeReferral = referred_by && referred_by !== authenticatedUserId ? referred_by : null;
     const { error } = await supabaseAdmin
       .from('users')
-      .insert([{ id: authenticatedUserId, referred_by }]);
+      .insert([{ id: authenticatedUserId, referred_by: safeReferral }]);
 
     if (error) {
       console.error('❌ Create user: Error creating user record:', error);
