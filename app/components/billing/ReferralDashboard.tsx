@@ -72,7 +72,7 @@ export default function ReferralDashboard() {
             <span className="font-medium text-green-800">Referral Discount Active!</span>
           </div>
           <p className="text-sm text-green-700">
-            You're currently receiving a {discountPercentage}% discount on your subscription because you successfully referred a friend who upgraded to Pro.
+            You're currently receiving a {discountPercentage}% discount on your subscription because you successfully referred a friend who signed up.
           </p>
         </div>
       )}
@@ -81,7 +81,7 @@ export default function ReferralDashboard() {
       <div className="mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-3">Invite Friends</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Share your referral link with friends. When they upgrade to Pro, you'll get a permanent 50% discount on your subscription!
+          Share your referral link with friends. When they sign up, you'll get a permanent 50% discount on your subscription!
         </p>
         
         <div className="flex items-center">
@@ -139,7 +139,7 @@ export default function ReferralDashboard() {
               2
             </div>
             <p className="text-sm text-gray-600">
-              They sign up using your link and upgrade to Pro
+              They sign up using your link
             </p>
           </div>
           <div className="flex items-start gap-3">

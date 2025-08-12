@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { referralService } from '@/lib/referral/referral-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,6 +57,39 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
           }
           console.log('✅ Create user: Set referral for existing user:', { userId: authenticatedUserId, referred_by });
+
+          // Grant referrer discount immediately on signup referral linkage
+          try {
+            // Upsert referral as converted
+            const { error: referralUpsertError } = await supabaseAdmin
+              .from('referrals')
+              .upsert(
+                {
+                  referrer_id: referred_by,
+                  referee_id: authenticatedUserId,
+                  status: 'converted',
+                  converted_at: new Date().toISOString(),
+                },
+                { onConflict: 'referrer_id,referee_id' }
+              );
+            if (referralUpsertError) {
+              console.error('❌ Create user: Error upserting referral record:', referralUpsertError);
+            }
+
+            // Set discounted flag on referrer
+            const { error: discountFlagError } = await supabaseAdmin
+              .from('users')
+              .update({ discounted: true })
+              .eq('id', referred_by);
+            if (discountFlagError) {
+              console.error('❌ Create user: Error setting discounted flag for referrer:', discountFlagError);
+            }
+
+            // Apply retroactive discount if referrer already has an active subscription
+            await referralService.applyRetroactiveDiscount(referred_by);
+          } catch (grantError) {
+            console.error('❌ Create user: Error granting referral discount on signup:', grantError);
+          }
         }
       }
       
@@ -76,6 +110,41 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('✅ Create user: User created successfully with referral:', { userId: authenticatedUserId, referred_by });
+
+    // If referred_by is present, grant referrer discount immediately
+    if (safeReferral) {
+      try {
+        // Upsert referral as converted
+        const { error: referralUpsertError } = await supabaseAdmin
+          .from('referrals')
+          .upsert(
+            {
+              referrer_id: safeReferral,
+              referee_id: authenticatedUserId,
+              status: 'converted',
+              converted_at: new Date().toISOString(),
+            },
+            { onConflict: 'referrer_id,referee_id' }
+          );
+        if (referralUpsertError) {
+          console.error('❌ Create user: Error upserting referral record (new user):', referralUpsertError);
+        }
+
+        // Set discounted flag on referrer
+        const { error: discountFlagError } = await supabaseAdmin
+          .from('users')
+          .update({ discounted: true })
+          .eq('id', safeReferral);
+        if (discountFlagError) {
+          console.error('❌ Create user: Error setting discounted flag for referrer (new user):', discountFlagError);
+        }
+
+        // Apply retroactive discount if referrer already has an active subscription
+        await referralService.applyRetroactiveDiscount(safeReferral);
+      } catch (grantError) {
+        console.error('❌ Create user: Error granting referral discount on signup (new user):', grantError);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

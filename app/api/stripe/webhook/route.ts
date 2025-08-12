@@ -327,13 +327,7 @@ export async function POST(req: NextRequest) {
           console.error('Failed to update user payment status:', updateError);
         }
 
-        // Handle referral conversion using new referral system
-        try {
-          const { referralService } = await import('@/lib/referral/referral-service');
-          await referralService.convertReferral(userId);
-        } catch (referralError) {
-          console.error('Failed to process referral conversion:', referralError);
-        }
+        // Referral conversion now happens at signup; no action needed here
 
         break;
       }
