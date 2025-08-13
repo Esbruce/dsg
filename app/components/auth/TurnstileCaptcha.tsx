@@ -4,7 +4,9 @@ import React, {
   useEffect,
   useRef,
   useState,
-  useCallback
+  useCallback,
+  forwardRef,
+  useImperativeHandle
 } from 'react'
 
 interface TurnstileCaptchaProps {
@@ -12,6 +14,9 @@ interface TurnstileCaptchaProps {
   onError: (error: string) => void
   siteKey: string
   className?: string
+  size?: 'invisible' | 'normal' | 'compact' | 'flexible'
+  action?: string
+  theme?: 'light' | 'dark' | 'auto'
 }
 
 declare global {
@@ -28,58 +33,62 @@ declare global {
           size?: string
           'refresh-expired'?: string
           'appearance'?: string
+          action?: string
         }
       ) => string
       remove: (widgetId: string) => void
+      execute: (widgetId: string) => void
+      reset: (widgetId?: string) => void
     }
     onTurnstileLoaded?: () => void
   }
 }
 
-// --- Singleton Script Loader ---
+// Minimal singleton script loader (default CF script, no globals)
 let scriptLoadPromise: Promise<void> | null = null;
 
 const loadTurnstileScript = (): Promise<void> => {
-    if (window.turnstile) {
-        return Promise.resolve();
-    }
-    if (scriptLoadPromise) {
-        return scriptLoadPromise;
-    }
-    scriptLoadPromise = new Promise((resolve, reject) => {
-        window.onTurnstileLoaded = () => {
-            console.log('✅ TurnstileCaptcha: Script loaded successfully.');
-            resolve();
-            delete window.onTurnstileLoaded;
-        };
-        
-        if (document.getElementById('turnstile-script')) {
-            console.log("🔍 TurnstileCaptcha: Script tag already exists, waiting for load.");
-            return;
-        }
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.turnstile) return Promise.resolve();
+  if (scriptLoadPromise) return scriptLoadPromise;
 
-        console.log('🔍 TurnstileCaptcha: Loading Turnstile script...');
-        const script = document.createElement('script');
-        script.id = 'turnstile-script';
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoaded';
-        script.async = true;
-        script.defer = true;
-        script.onerror = (error) => {
-            console.error('❌ TurnstileCaptcha: Failed to load script', error);
-            scriptLoadPromise = null;
-            reject(new Error('Failed to load CAPTCHA script'));
-        };
-        document.head.appendChild(script);
-    });
-    return scriptLoadPromise;
+  scriptLoadPromise = new Promise((resolve, reject) => {
+    const existing = document.getElementById('turnstile-script') as HTMLScriptElement | null;
+    if (existing) {
+      if (window.turnstile) {
+        resolve();
+      } else {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Failed to load CAPTCHA script')), { once: true });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = 'turnstile-script';
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      scriptLoadPromise = null;
+      reject(new Error('Failed to load CAPTCHA script'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return scriptLoadPromise;
 }
 
-const TurnstileCaptcha = ({ 
+const TurnstileCaptcha = forwardRef<{ execute: () => void; reset: () => void }, TurnstileCaptchaProps>(({ 
   onVerify, 
   onError, 
   siteKey, 
-  className = ''
-}: TurnstileCaptchaProps) => {
+  className = '',
+  size = 'normal',
+  action,
+  theme = 'light'
+}: TurnstileCaptchaProps, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
@@ -127,10 +136,13 @@ const TurnstileCaptcha = ({
         }
         
         console.log('🔍 TurnstileCaptcha: Rendering widget...');
+        const appearance = size === 'invisible' ? 'interaction-only' : 'always';
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          theme: 'light',
-          appearance: 'always', // This makes the widget interactive
+          theme,
+          size,
+          appearance,
+          action,
           callback: handleVerify,
           'error-callback': handleError,
           'expired-callback': handleExpired
@@ -159,7 +171,31 @@ const TurnstileCaptcha = ({
         widgetIdRef.current = null;
       }
     }
-  }, [siteKey, handleVerify, handleError, handleExpired]);
+  }, [siteKey]);
+
+  useImperativeHandle(ref, () => ({
+    execute: () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.execute(widgetIdRef.current)
+        } catch (e) {
+          console.error('❌ Turnstile execute error:', e)
+          onError('CAPTCHA execution failed.')
+        }
+      } else {
+        onError('CAPTCHA not ready.')
+      }
+    },
+    reset: () => {
+      if (window.turnstile) {
+        try {
+          window.turnstile.reset(widgetIdRef.current || undefined)
+        } catch (e) {
+          console.error('❌ Turnstile reset error:', e)
+        }
+      }
+    }
+  }))
 
   return (
     <div className={className}>
@@ -182,6 +218,6 @@ const TurnstileCaptcha = ({
       )}
     </div>
   )
-};
+});
 
 export default TurnstileCaptcha;

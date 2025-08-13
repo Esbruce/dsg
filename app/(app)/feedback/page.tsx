@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { validateEmail } from "@/lib/utils/validation";
+import TurnstileCaptcha from "@/app/components/auth/TurnstileCaptcha";
 
 export default function FeedbackPage() {
   const [name, setName] = useState("");
@@ -10,6 +11,9 @@ export default function FeedbackPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,12 +30,19 @@ export default function FeedbackPage() {
       return;
     }
 
+    if (!captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setIsSubmitting(true);
+    setCaptchaError(null);
+
     try {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, captchaToken }),
       });
 
       if (!res.ok) {
@@ -43,11 +54,16 @@ export default function FeedbackPage() {
       setName("");
       setEmail("");
       setMessage("");
+      setCaptchaToken(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCaptchaError = (msg: string) => {
+    setCaptchaError(msg);
   };
 
   return (
@@ -111,6 +127,20 @@ export default function FeedbackPage() {
               className="w-full min-h-[140px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               placeholder="What’s working well? What can we improve?"
             />
+          </div>
+
+          <div className="pt-2">
+            <p className="text-sm text-gray-600 mb-2">Please complete the security check below</p>
+            <TurnstileCaptcha
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""}
+              action="feedback_submit"
+              className="flex justify-start"
+              onVerify={(token) => { setCaptchaToken(token); setCaptchaError(null); }}
+              onError={handleCaptchaError}
+            />
+            {captchaError && (
+              <div className="mt-2 text-sm text-red-600">{captchaError}</div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
