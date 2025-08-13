@@ -220,4 +220,7 @@ const TurnstileCaptcha = forwardRef<{ execute: () => void; reset: () => void }, 
   )
 });
 
+// Satisfy react/display-name lint rule for forwardRef components
+TurnstileCaptcha.displayName = 'TurnstileCaptcha'
+
 export default TurnstileCaptcha;
