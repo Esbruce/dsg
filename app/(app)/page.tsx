@@ -78,33 +78,7 @@ export default function Home() {
     setIsProcessing(true);
 
     try {
-      // 1. Check user status (server-side authenticated)
-      const statusRes = await fetch("/api/user/data", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      if (!statusRes.ok) {
-        throw new Error(
-          `Status check failed: ${statusRes.status} ${statusRes.statusText}`
-        );
-      }
-
-      // Parse status response and extract user information
-      const { userStatus } = await statusRes.json();
-      if (!userStatus) {
-        throw new Error("Invalid response from status check");
-      }
-
-      // 2. Show limit overlay if over limit and not paid
-      if (!userStatus.is_paid && userStatus.daily_usage_count >= 3) {
-        setShowLimitOverlay(true);
-        setIsProcessing(false);
-        return;
-      }
-
-      // 3. Call generate-summary API (handles quota, OpenAI, and DB insertion)
+      // Call generate-summary API (handles auth, quota, OpenAI, and DB insertion)
       const summaryRes = await fetch("/api/generate_summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,6 +95,11 @@ export default function Home() {
       }
 
       if (!summaryRes.ok) {
+        if (summaryRes.status === 403) {
+          setShowLimitOverlay(true);
+          setIsProcessing(false);
+          return;
+        }
         throw new Error(
           summaryData.error ||
             `Summary generation failed: ${summaryRes.status} ${summaryRes.statusText}`

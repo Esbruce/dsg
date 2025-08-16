@@ -29,6 +29,9 @@ export default function AppLayout({
   const [isFetching, setIsFetching] = useState(false); // Add flag to prevent duplicate fetches
   const [referralData, setReferralData] = useState<any>(null);
   const [discountData, setDiscountData] = useState<any>(null);
+  const [referralProgress, setReferralProgress] = useState<any>(null);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [unlimitedActive, setUnlimitedActive] = useState<boolean>(false);
 
   const maxUsage = 3;
 
@@ -107,7 +110,7 @@ export default function AppLayout({
       console.log('🔍 fetchUserData: Combined data fetch completed. Status:', res.status);
 
       if (res.ok) {
-        const { userStatus, referral, discount } = await res.json();
+        const { userStatus, referral, discount, referralProgress: progress, inviteMessage: serverInviteMessage } = await res.json();
 
         // Process user status response
         if (userStatus) {
@@ -124,6 +127,17 @@ export default function AppLayout({
         // Process discount data response
         if (discount) {
           setDiscountData(discount);
+        }
+
+        // Process referral progress and unlimited
+        if (progress) {
+          setReferralProgress(progress);
+          const active = progress.unlimitedUntil ? new Date(progress.unlimitedUntil) > new Date() : false;
+          setUnlimitedActive(active);
+        }
+
+        if (serverInviteMessage) {
+          setInviteMessage(serverInviteMessage);
         }
       } else {
         console.error('🔍 fetchUserData: Combined data request failed:', res.status);
@@ -148,6 +162,7 @@ export default function AppLayout({
   // For unauthenticated users, use mock data but show full interface
   const displayUsageCount = isAuthenticated ? usageCount : 0; // 0 summaries used = 3 remaining
   const displayIsPaid = isAuthenticated ? isPaid : false;
+  const displayUnlimited = isAuthenticated ? unlimitedActive : false;
   const displayUserEmail = isAuthenticated ? userIdentifier : null; // Use identifier (email or phone)
   
   // Stable context value to prevent unnecessary re-renders
@@ -162,11 +177,14 @@ export default function AppLayout({
       isAuthenticated,
       referralData,
       discountData,
+      referralProgress,
+      inviteMessage,
+      unlimitedActive: displayUnlimited,
       refreshUserData: refreshUserData,
       refreshAll: refreshUserData,
     };
     return value;
-  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, isLoading, isAuthenticated, referralData, discountData, refreshUserData]);
+  }, [displayUserEmail, userPhone, userIdentifier, displayUsageCount, displayIsPaid, displayUnlimited, isLoading, isAuthenticated, referralData, discountData, referralProgress, inviteMessage, refreshUserData]);
 
   // Fetch user data on component mount and listen for auth changes
   useEffect(() => {

@@ -22,10 +22,9 @@ ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
 
 -- Only allow service role to access rate_limits table
 CREATE POLICY "Service role can manage rate limits" ON public.rate_limits
-    FOR ALL USING (auth.role() = 'service_role');
+    FOR ALL USING ((select auth.role()) = 'service_role');
 
--- Create function to automatically update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -33,11 +32,14 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Ensure a fixed, safe search_path for reliability and security
+ALTER FUNCTION public.update_updated_at_column() SET search_path = pg_catalog, public;
+
 -- Create trigger to automatically update updated_at
 CREATE TRIGGER update_rate_limits_updated_at 
     BEFORE UPDATE ON public.rate_limits 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Add comments for documentation
 COMMENT ON TABLE public.rate_limits IS 'Rate limiting data for API endpoints';

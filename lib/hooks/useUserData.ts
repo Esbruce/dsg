@@ -21,6 +21,14 @@ export interface UserDataContextType {
     hasDiscount: boolean;
     discountPercentage: number;
   } | null;
+  inviteMessage?: string | null;
+  referralProgress?: {
+    convertedCount: number;
+    milestonesEarned: number;
+    invitesToNext: number;
+    unlimitedUntil: string | null;
+  } | null;
+  unlimitedActive?: boolean;
   
   // Actions
   refreshUserData: () => Promise<void>;
@@ -38,6 +46,9 @@ export const UserDataContext = createContext<UserDataContextType>({
   isAuthenticated: false,
   referralData: null,
   discountData: null,
+  inviteMessage: null,
+  referralProgress: null,
+  unlimitedActive: false,
   refreshUserData: async () => {},
   refreshAll: async () => {},
 });

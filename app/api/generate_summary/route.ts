@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         // Get the user's records
         const { data: userData, error: userError } = await supabaseAdmin
             .from('users')
-            .select('daily_usage_count, last_used_at, is_paid')
+            .select('daily_usage_count, last_used_at, is_paid, unlimited_until')
             .eq('id', authenticatedUserId)
             .single();
 
@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: userError?.message || 'User not found' }, { status: 404 });
         }
 
-        // Paid users bypass the usage limit
-        if (userData.is_paid) {
+        // Paid users or users within unlimited period bypass the usage limit
+        if (userData.is_paid || (userData as any).unlimited_until && dayjs((userData as any).unlimited_until).isAfter(dayjs())) {
             return await generateSummary(authenticatedUserId, sanitizedNotes, medical_notes);
         }
 

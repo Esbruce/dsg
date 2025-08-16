@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useReferralDiscount } from '@/lib/hooks/useReferralDiscount';
-import { useReferralData } from '@/lib/hooks/useReferralData';
+import React, { useState } from 'react';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 // Interface is now imported from the centralized hook
 
 export default function ReferralDashboard() {
   const [copied, setCopied] = useState(false);
-  const { hasDiscount, discountPercentage } = useReferralDiscount();
-  const referralData = useReferralData();
+  const { referralData, referralProgress, unlimitedActive } = useUserData();
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -29,23 +27,13 @@ export default function ReferralDashboard() {
     });
   };
 
-  // Loading and error states are handled by the context
+  // Loading state
   if (!referralData) {
     return (
       <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
         <div className="text-center py-4">
           <div className="w-6 h-6 border-2 border-gray-300 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-2"></div>
           <p className="text-gray-600">Loading referral data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!referralData) {
-    return (
-      <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] p-6">
-        <div className="text-center py-4">
-          <p className="text-gray-600">No referral data available</p>
         </div>
       </div>
     );
@@ -62,18 +50,16 @@ export default function ReferralDashboard() {
         <h2 className="text-xl font-semibold text-gray-900">Referral Program</h2>
       </div>
 
-      {/* Discount Status */}
-      {hasDiscount && (
+      {/* Unlimited status */}
+      {unlimitedActive && referralProgress?.unlimitedUntil && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-medium text-green-800">Referral Discount Active!</span>
+            <span className="font-medium text-green-800">Unlimited active</span>
           </div>
-          <p className="text-sm text-green-700">
-            You're currently receiving a {discountPercentage}% discount on your subscription because you successfully referred a friend who signed up.
-          </p>
+          <p className="text-sm text-green-700">Until <span className="font-medium">{new Date(referralProgress.unlimitedUntil).toLocaleDateString()}</span></p>
         </div>
       )}
 
@@ -81,7 +67,7 @@ export default function ReferralDashboard() {
       <div className="mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-3">Invite Friends</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Share your referral link with friends. When they sign up, you'll get a permanent 50% discount on your subscription!
+          Share your referral link. Rewards: invite 1 friend → +1 month; 2 friends → +3 months total; 3 friends → +6 months total (max 6 months/year).
         </p>
         
         <div className="flex items-center">
@@ -100,24 +86,41 @@ export default function ReferralDashboard() {
         </div>
       </div>
 
-      {/* Friend Status */}
-      {referralData.hasBeenReferred && referralData.referrerInfo && (
+      {/* Progress */}
+      {referralProgress && (
         <div className="pt-6 border-t border-[var(--color-neutral-200)]">
-          <h3 className="text-lg font-medium text-gray-900 mb-3">Your Referred Friend</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-3">Your progress</h3>
           <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Friend joined</p>
-                <p className="text-sm text-gray-600">
-                  {formatDate(referralData.referrerInfo.createdAt)}
-                </p>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-700">This round</span>
+              <span className="text-sm text-gray-600">{(referralProgress.convertedCount % 3)}/3 invites</span>
             </div>
+            <div className="flex items-center gap-2">
+              {[0,1,2].map((i) => {
+                const achieved = i < (referralProgress.convertedCount % 3);
+                return (
+                  <div key={i} className={`px-2 py-1 rounded-full text-xs border flex items-center gap-1 ${achieved ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-white border-[var(--color-neutral-300)] text-[var(--color-neutral-600)]'}`}>
+                    {achieved ? (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" />
+                      </svg>
+                    )}
+                    <span>Invite {i+1}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-sm text-gray-700 mt-2">
+              {referralProgress.invitesToNext === 0
+                ? (referralProgress.convertedCount > 0
+                    ? '🎉 Milestone reached!'
+                    : 'Invite more for more summaries.')
+                : `${referralProgress.invitesToNext} more ${referralProgress.invitesToNext === 1 ? 'invite' : 'invites'} to unlock ${unlimitedActive ? '+3 months total (this tier)' : '+1/+2/+3 months across milestones'}`}
+            </p>
           </div>
         </div>
       )}
@@ -131,7 +134,7 @@ export default function ReferralDashboard() {
               1
             </div>
             <p className="text-sm text-gray-600">
-              Share your referral link with a friend
+              Share your referral link with a friend (Invite 1 → +1 month)
             </p>
           </div>
           <div className="flex items-start gap-3">
@@ -139,7 +142,7 @@ export default function ReferralDashboard() {
               2
             </div>
             <p className="text-sm text-gray-600">
-              They sign up using your link
+              They sign up using your link (Invite 2 → +3 months total)
             </p>
           </div>
           <div className="flex items-start gap-3">
@@ -147,7 +150,7 @@ export default function ReferralDashboard() {
               3
             </div>
             <p className="text-sm text-gray-600">
-              You get a permanent 50% discount on your subscription!
+              Invite 3 → +6 months total (max 6 months/year)
             </p>
           </div>
         </div>

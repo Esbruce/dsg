@@ -67,7 +67,7 @@ export const OTP_CONSTANTS = {
   OTP_LENGTH: 6,
   OTP_TIMEOUT: 60, // seconds
   RESEND_COOLDOWN: 60, // seconds
-  AUTH_STATE_TIMEOUT: 3000, // milliseconds
+  AUTH_STATE_TIMEOUT: 700, // milliseconds
   MAX_RETRY_ATTEMPTS: 3,
   PHONE_NUMBER_MAX_LENGTH: 15,
 } as const

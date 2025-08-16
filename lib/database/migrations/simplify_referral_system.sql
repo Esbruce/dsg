@@ -20,15 +20,18 @@ ADD CONSTRAINT check_no_self_referral
 CHECK (referred_by IS NULL OR referred_by != id);
 
 -- Create a function to get referral link for a user
-CREATE OR REPLACE FUNCTION get_user_referral_link(user_uuid UUID)
+CREATE OR REPLACE FUNCTION public.get_user_referral_link(user_uuid UUID)
 RETURNS TEXT AS $$
 BEGIN
   RETURN current_setting('app.base_url', true) || '/?ref=' || user_uuid::text;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ensure a fixed, safe search_path
+ALTER FUNCTION public.get_user_referral_link(UUID) SET search_path = pg_catalog, public;
+
 -- Create a function to validate referral UUID
-CREATE OR REPLACE FUNCTION validate_referral_uuid(referral_uuid TEXT)
+CREATE OR REPLACE FUNCTION public.validate_referral_uuid(referral_uuid TEXT)
 RETURNS BOOLEAN AS $$
 DECLARE
   user_exists BOOLEAN;
@@ -45,8 +48,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ensure a fixed, safe search_path
+ALTER FUNCTION public.validate_referral_uuid(TEXT) SET search_path = pg_catalog, public;
+
 -- Create a function to process referral when user becomes paid
-CREATE OR REPLACE FUNCTION process_referral_reward()
+CREATE OR REPLACE FUNCTION public.process_referral_reward()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Only process if user just became paid and has a referrer
@@ -63,26 +69,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ensure a fixed, safe search_path
+ALTER FUNCTION public.process_referral_reward() SET search_path = pg_catalog, public;
+
 -- Create trigger to automatically process referral rewards
 DROP TRIGGER IF EXISTS trigger_process_referral_reward ON users;
 CREATE TRIGGER trigger_process_referral_reward
   AFTER UPDATE ON users
   FOR EACH ROW
-  EXECUTE FUNCTION process_referral_reward();
+  EXECUTE FUNCTION public.process_referral_reward();
 
 -- Update RLS policies for the simplified system
 -- Users can view their own referral data
 CREATE POLICY "Users can view their own referral data" ON referrals
-  FOR SELECT USING (auth.uid() = referrer_id OR auth.uid() = referee_id);
+  FOR SELECT USING ((select auth.uid()) = referrer_id OR (select auth.uid()) = referee_id);
 
 -- Users can insert referrals (when they sign up with a referral)
 CREATE POLICY "Users can insert referrals" ON referrals
-  FOR INSERT WITH CHECK (auth.uid() = referee_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = referee_id);
 
 -- Users can update their own referrals
 CREATE POLICY "Users can update their own referrals" ON referrals
-  FOR UPDATE USING (auth.uid() = referrer_id OR auth.uid() = referee_id);
+  FOR UPDATE USING ((select auth.uid()) = referrer_id OR (select auth.uid()) = referee_id);
 
 -- Grant necessary permissions
-GRANT EXECUTE ON FUNCTION get_user_referral_link(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION validate_referral_uuid(TEXT) TO authenticated; 
+GRANT EXECUTE ON FUNCTION public.get_user_referral_link(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.validate_referral_uuid(TEXT) TO authenticated;

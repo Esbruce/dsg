@@ -160,9 +160,7 @@ function SignupPageContent() {
         }
         
         // Redirect to main app after successful signup
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
+        router.push('/');
       } else if (result.error?.includes('Invalid OTP') || result.error?.includes('Invalid token')) {
         updateOTPState({ 
           otpError: "Invalid verification code. Please check and try again.",

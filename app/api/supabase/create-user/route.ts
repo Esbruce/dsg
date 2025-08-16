@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { referralService } from '@/lib/referral/referral-service';
+// Referral rewards handled in-app by awarding unlimited months based on referrals
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,38 +57,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
           }
           console.log('✅ Create user: Set referral for existing user:', { userId: authenticatedUserId, referred_by });
-
-          // Grant referrer discount immediately on signup referral linkage
+          // Award referral months to referrer using progressive scheme (1,2,3 months)
           try {
-            // Upsert referral as converted
-            const { error: referralUpsertError } = await supabaseAdmin
-              .from('referrals')
-              .upsert(
-                {
-                  referrer_id: referred_by,
-                  referee_id: authenticatedUserId,
-                  status: 'converted',
-                  converted_at: new Date().toISOString(),
-                },
-                { onConflict: 'referrer_id,referee_id' }
-              );
-            if (referralUpsertError) {
-              console.error('❌ Create user: Error upserting referral record:', referralUpsertError);
-            }
-
-            // Set discounted flag on referrer
-            const { error: discountFlagError } = await supabaseAdmin
-              .from('users')
-              .update({ discounted: true })
-              .eq('id', referred_by);
-            if (discountFlagError) {
-              console.error('❌ Create user: Error setting discounted flag for referrer:', discountFlagError);
-            }
-
-            // Apply retroactive discount if referrer already has an active subscription
-            await referralService.applyRetroactiveDiscount(referred_by);
+            await awardReferralMilestones(referred_by);
           } catch (grantError) {
-            console.error('❌ Create user: Error granting referral discount on signup:', grantError);
+            console.error('❌ Create user: Error awarding referral months on signup:', grantError);
           }
         }
       }
@@ -111,38 +84,12 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Create user: User created successfully with referral:', { userId: authenticatedUserId, referred_by });
 
-    // If referred_by is present, grant referrer discount immediately
+    // If referred_by is present, award referral months immediately
     if (safeReferral) {
       try {
-        // Upsert referral as converted
-        const { error: referralUpsertError } = await supabaseAdmin
-          .from('referrals')
-          .upsert(
-            {
-              referrer_id: safeReferral,
-              referee_id: authenticatedUserId,
-              status: 'converted',
-              converted_at: new Date().toISOString(),
-            },
-            { onConflict: 'referrer_id,referee_id' }
-          );
-        if (referralUpsertError) {
-          console.error('❌ Create user: Error upserting referral record (new user):', referralUpsertError);
-        }
-
-        // Set discounted flag on referrer
-        const { error: discountFlagError } = await supabaseAdmin
-          .from('users')
-          .update({ discounted: true })
-          .eq('id', safeReferral);
-        if (discountFlagError) {
-          console.error('❌ Create user: Error setting discounted flag for referrer (new user):', discountFlagError);
-        }
-
-        // Apply retroactive discount if referrer already has an active subscription
-        await referralService.applyRetroactiveDiscount(safeReferral);
+        await awardReferralMilestones(safeReferral);
       } catch (grantError) {
-        console.error('❌ Create user: Error granting referral discount on signup (new user):', grantError);
+        console.error('❌ Create user: Error awarding referral months on signup (new user):', grantError);
       }
     }
 
@@ -152,6 +99,107 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       error: 'Failed to create user. Please try again.' 
     }, { status: 500 });
+  }
+}
+
+/**
+ * Award referral months using progressive scheme:
+ * - 1st invite → +1 month
+ * - 2nd invite → +2 months (total 3)
+ * - 3rd invite → +3 months (total 6)
+ * Cap: 6 months within a rolling 12 months window.
+ */
+async function awardReferralMilestones(referrerId: string) {
+  // How many users has this referrer brought in?
+  const { count: referredCount, error: countError } = await supabaseAdmin
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('referred_by', referrerId);
+
+  if (countError) {
+    console.error('awardReferralMilestones: count error', countError);
+    return;
+  }
+
+  const total = referredCount || 0;
+  // We only award the first three milestones in this scheme
+  const milestonesEarned = Math.min(total, 3);
+
+  // Fetch existing milestones to avoid double-granting
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('referral_milestones')
+    .select('milestone_index, granted_months, granted_at')
+    .eq('user_id', referrerId)
+    .eq('milestone_size', 3) // reuse size=3 to group this campaign
+    .order('milestone_index', { ascending: true });
+  if (existingError) {
+    console.error('awardReferralMilestones: fetch existing error', existingError);
+    return;
+  }
+  const grantedIndexes = new Set((existing || []).map((m: any) => m.milestone_index));
+
+  // Compute cap usage in last 12 months
+  const windowStartIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: inWindow, error: windowError } = await supabaseAdmin
+    .from('referral_milestones')
+    .select('granted_months, granted_at')
+    .eq('user_id', referrerId)
+    .gte('granted_at', windowStartIso);
+  if (windowError) {
+    console.error('awardReferralMilestones: window fetch error', windowError);
+    return;
+  }
+  let monthsGrantedInWindow = (inWindow || []).reduce((sum: number, row: any) => sum + (row.granted_months || 0), 0);
+
+  // Helper add months
+  function addMonths(base: Date, months: number): Date {
+    const d = new Date(base.getTime());
+    d.setMonth(d.getMonth() + months);
+    return d;
+  }
+
+  for (let idx = 1; idx <= milestonesEarned; idx++) {
+    if (grantedIndexes.has(idx)) continue; // already granted
+
+    // Progressive grant: 1, then 2, then 3 months
+    const proposedMonths = idx; 
+    const remainingCap = Math.max(0, 6 - monthsGrantedInWindow);
+    const grantMonths = Math.min(proposedMonths, remainingCap);
+    if (grantMonths <= 0) break;
+
+    // Read current unlimited_until
+    const { data: refUser, error: refUserError } = await supabaseAdmin
+      .from('users')
+      .select('unlimited_until')
+      .eq('id', referrerId)
+      .single();
+    if (refUserError) {
+      console.error('awardReferralMilestones: user fetch error', refUserError);
+      return;
+    }
+
+    const baseDate = refUser?.unlimited_until ? new Date(refUser.unlimited_until as any) : new Date();
+    const newUntil = addMonths(baseDate, grantMonths);
+
+    // Update user
+    const { error: updateUserError } = await supabaseAdmin
+      .from('users')
+      .update({ unlimited_until: newUntil.toISOString() })
+      .eq('id', referrerId);
+    if (updateUserError) {
+      console.error('awardReferralMilestones: update user error', updateUserError);
+      return;
+    }
+
+    // Insert milestone
+    const { error: insertError } = await supabaseAdmin
+      .from('referral_milestones')
+      .insert([{ user_id: referrerId, milestone_size: 3, milestone_index: idx, granted_months: grantMonths }]);
+    if (insertError) {
+      console.error('awardReferralMilestones: insert milestone error', insertError);
+    }
+
+    monthsGrantedInWindow += grantMonths;
   }
 }
 

@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Usage from "../ui/widgets/Usage";
-import Plan from "../ui/widgets/Plan";
+// import Plan from "../ui/widgets/Plan";
 import Invite from "../ui/widgets/Invite";
 import { UsageSkeleton } from "../ui/widgets/UsageSkeleton";
 import { PlanSkeleton } from "../ui/widgets/PlanSkeleton";
@@ -39,7 +39,7 @@ export default function Sidebar({
   
   const showSkeletons = isAuthenticated && isLoading;
   const router = useRouter();
-  const { refreshUserData } = useUserData();
+  const { refreshUserData, unlimitedActive, referralProgress, inviteMessage } = useUserData();
   const { setRequestIntent } = useRequestIntent();
 
   const handleLogout = async () => {
@@ -90,20 +90,18 @@ export default function Sidebar({
               usageCount={usageCount}
               maxUsage={maxUsage}
               isPaid={isPaid}
+              unlimitedActive={unlimitedActive}
+              unlimitedUntil={referralProgress?.unlimitedUntil || null}
             />
-            <Plan 
-              isPaid={isPaid}
-              onGoUnlimited={onGoUnlimited}
+            <Invite 
+              inviteLink={inviteLink}
+              onCopyInviteLink={onCopyInviteLink}
+              inviteLinkCopied={inviteLinkCopied}
               isAuthenticated={isAuthenticated}
-              isLoading={isLoading}
+              referralProgress={referralProgress as any}
+              onSignInClick={handleSignInClick}
+              initialInviteMessage={inviteMessage || undefined}
             />
-            {isAuthenticated && (
-              <Invite 
-                inviteLink={inviteLink}
-                onCopyInviteLink={onCopyInviteLink}
-                inviteLinkCopied={inviteLinkCopied}
-              />
-            )}
           </>
         )}
       </div>

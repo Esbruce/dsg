@@ -44,6 +44,9 @@ CREATE INDEX IF NOT EXISTS idx_referrals_referee_id ON referrals(referee_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
 CREATE INDEX IF NOT EXISTS idx_referral_rewards_referrer_id ON referral_rewards(referrer_id);
 
+-- Add covering index for users.referred_by to match production
+CREATE INDEX IF NOT EXISTS idx_users_referred_by ON public.users(referred_by);
+
 -- Add RLS policies
 ALTER TABLE referral_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
@@ -51,27 +54,27 @@ ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for referral_codes
 CREATE POLICY "Users can view their own referral codes" ON referral_codes
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own referral codes" ON referral_codes
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 -- RLS policies for referrals
 CREATE POLICY "Users can view referrals they made" ON referrals
-  FOR SELECT USING (auth.uid() = referrer_id);
+  FOR SELECT USING ((select auth.uid()) = referrer_id);
 
 CREATE POLICY "Users can view referrals where they were referred" ON referrals
-  FOR SELECT USING (auth.uid() = referee_id);
+  FOR SELECT USING ((select auth.uid()) = referee_id);
 
 CREATE POLICY "Users can insert referrals" ON referrals
-  FOR INSERT WITH CHECK (auth.uid() = referee_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = referee_id);
 
 -- RLS policies for referral_rewards
 CREATE POLICY "Users can view their own rewards" ON referral_rewards
-  FOR SELECT USING (auth.uid() = referrer_id);
+  FOR SELECT USING ((select auth.uid()) = referrer_id);
 
 -- Function to generate referral codes
-CREATE OR REPLACE FUNCTION generate_referral_code()
+CREATE OR REPLACE FUNCTION public.generate_referral_code()
 RETURNS TEXT AS $$
 DECLARE
   code TEXT;
@@ -92,8 +95,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ensure a fixed, safe search_path for reliability and security
+ALTER FUNCTION public.generate_referral_code() SET search_path = pg_catalog, public;
+
 -- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -101,14 +107,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ensure a fixed, safe search_path for reliability and security
+ALTER FUNCTION public.update_updated_at_column() SET search_path = pg_catalog, public;
+
 -- Triggers to automatically update updated_at
 CREATE TRIGGER update_referral_codes_updated_at
   BEFORE UPDATE ON referral_codes
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER update_referrals_updated_at
   BEFORE UPDATE ON referrals
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO authenticated;
