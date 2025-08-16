@@ -18,6 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://dischargesummarygenerator.website'),
   title: "Discharge Summary Generator",
   description: "AI-powered discharge summary generator for healthcare professionals. Convert patient notes into comprehensive discharge summaries and care plans instantly.",
   keywords: ["discharge summary", "medical notes", "healthcare", "AI", "medical documentation", "patient care", "healthcare professionals"],
