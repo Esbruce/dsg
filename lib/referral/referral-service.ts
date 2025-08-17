@@ -15,6 +15,35 @@ export interface ReferralData {
 }
 
 export class ReferralService {
+  private getThreshold(): number {
+    const raw = process.env.REFERRAL_DISCOUNT_THRESHOLD;
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+  }
+
+  private isGrandfatheringEnabled(): boolean {
+    const raw = process.env.REFERRAL_DISCOUNT_GRANDFATHER;
+    if (!raw) return false;
+    return raw.toLowerCase() === 'true' || raw === '1';
+  }
+
+  /**
+   * Count number of paid referees for a given referrer
+   */
+  private async getConvertedReferralsCount(referrerId: string): Promise<number> {
+    // For invite-based eligibility, count total signups attributed to this referrer
+    const { count, error } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('referred_by', referrerId);
+
+    if (error) {
+      console.error('❌ Error counting referrals:', error);
+      return 0;
+    }
+
+    return count || 0;
+  }
   /**
    * Get referral link for a user (using their UUID)
    */
@@ -147,28 +176,55 @@ export class ReferralService {
 
       console.log('✅ Found referrer:', referredUser.referred_by);
 
-      // Update referrer's flags
-      const { error: updateError } = await supabaseAdmin
-        .from('users')
-        .update({ 
-          has_reffered_paid_user: true,
-          discounted: true // Set discount flag
-        })
-        .eq('id', referredUser.referred_by);
+      // Determine if referrer now meets threshold
+      const threshold = this.getThreshold();
+      const convertedCount = await this.getConvertedReferralsCount(referredUser.referred_by);
 
-      if (updateError) {
-        console.error('❌ Error updating referrer flags:', updateError);
+      // Fetch current discounted flag to detect threshold crossing
+      const { data: referrerUser, error: fetchReferrerError } = await supabaseAdmin
+        .from('users')
+        .select('discounted')
+        .eq('id', referredUser.referred_by)
+        .single();
+      if (fetchReferrerError) {
+        console.error('❌ Error fetching referrer user:', fetchReferrerError);
         return;
       }
 
-      console.log('✅ Updated referrer flags for user:', referredUser.referred_by);
+      const alreadyDiscounted = !!referrerUser?.discounted;
+      const nowEligible = convertedCount >= threshold;
 
-      // Note: No longer applying customer balance since we use coupons for permanent discounts
-      // The discount will be applied automatically via Stripe coupons
-      console.log('🎫 Referral discount will be applied via Stripe coupon system');
-      
-      // Apply retroactive discount to existing subscription if user has one
-      await this.applyRetroactiveDiscount(referredUser.referred_by);
+      if (nowEligible && !alreadyDiscounted) {
+        // Mark discounted for visibility/grandfathering, then apply retroactive coupon
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({ 
+            has_reffered_paid_user: true,
+            discounted: true
+          })
+          .eq('id', referredUser.referred_by);
+
+        if (updateError) {
+          console.error('❌ Error updating referrer flags:', updateError);
+          return;
+        }
+
+        console.log('✅ Referrer reached threshold and was marked discounted:', {
+          referrerId: referredUser.referred_by,
+          convertedCount,
+          threshold
+        });
+
+        // Apply retroactive discount to existing subscription if user has one
+        await this.applyRetroactiveDiscount(referredUser.referred_by);
+      } else {
+        console.log('ℹ️ Referrer not yet eligible or already discounted:', {
+          referrerId: referredUser.referred_by,
+          convertedCount,
+          threshold,
+          alreadyDiscounted
+        });
+      }
     } catch (error) {
       console.error('❌ Error converting referral:', error);
     }
@@ -220,7 +276,18 @@ export class ReferralService {
       // Apply the coupon to the existing subscription
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        // Use the correct Stripe API method to apply coupon to subscription
+        // First check if subscription already has a discount
+        const subscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id, {
+          expand: ['discount.coupon'] as any
+        });
+
+        const alreadyApplied = (subscription as any)?.discount?.coupon?.id === couponId;
+
+        if (alreadyApplied) {
+          console.log('ℹ️ Retroactive discount already applied to subscription:', user.stripe_subscription_id);
+          return;
+        }
+
         await stripe.subscriptions.update(user.stripe_subscription_id, {
           // @ts-ignore - Stripe API accepts coupon parameter
           coupon: couponId
@@ -244,13 +311,21 @@ export class ReferralService {
     discountPercentage: number;
   }> {
     try {
+      const threshold = this.getThreshold();
+      const grandfather = this.isGrandfatheringEnabled();
+
+      // Fetch current discounted flag to support grandfathering
       const { data: user } = await supabaseAdmin
         .from('users')
         .select('discounted')
         .eq('id', userId)
         .single();
 
-      const hasDiscount = user?.discounted || false;
+      const convertedCount = await this.getConvertedReferralsCount(userId);
+      const eligibleByCount = convertedCount >= threshold;
+      const eligibleByGrandfather = grandfather && !!user?.discounted;
+
+      const hasDiscount = eligibleByCount || eligibleByGrandfather;
       const discountPercentage = hasDiscount ? 50 : 0; // 50% discount
 
       return {

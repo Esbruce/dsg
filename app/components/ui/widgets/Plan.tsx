@@ -83,7 +83,7 @@ export default function Plan({ isPaid, onGoUnlimited, isAuthenticated, isLoading
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          Auto 50% off if you invite a friend
+          Unlock 50% off after 3 referrals
         </div>
       </div>
 

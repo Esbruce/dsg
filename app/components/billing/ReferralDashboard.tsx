@@ -67,7 +67,7 @@ export default function ReferralDashboard() {
       <div className="mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-3">Invite Friends</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Share your referral link. Rewards: invite 1 friend → +1 month; 2 friends → +3 months total; 3 friends → +6 months total (max 6 months/year).
+          Share your referral link. Rewards: invite 1 friend → +1 month; 2 friends → +3 months total; 3 friends → +6 months total, then 50% off afterward (max 6 months/year).
         </p>
         
         <div className="flex items-center">
@@ -91,28 +91,40 @@ export default function ReferralDashboard() {
         <div className="pt-6 border-t border-[var(--color-neutral-200)]">
           <h3 className="text-lg font-medium text-gray-900 mb-3">Your progress</h3>
           <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-700">This round</span>
-              <span className="text-sm text-gray-600">{(referralProgress.convertedCount % 3)}/3 invites</span>
-            </div>
+            {(() => {
+              const total = referralProgress.convertedCount || 0;
+              const mod = total % 3;
+              const displayCount = total === 0 ? 0 : (mod === 0 ? 3 : mod);
+              return (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-700">This round</span>
+                  <span className="text-sm text-gray-600">{displayCount}/3 invites</span>
+                </div>
+              );
+            })()}
             <div className="flex items-center gap-2">
-              {[0,1,2].map((i) => {
-                const achieved = i < (referralProgress.convertedCount % 3);
-                return (
-                  <div key={i} className={`px-2 py-1 rounded-full text-xs border flex items-center gap-1 ${achieved ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-white border-[var(--color-neutral-300)] text-[var(--color-neutral-600)]'}`}>
-                    {achieved ? (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" />
-                      </svg>
-                    )}
-                    <span>Invite {i+1}</span>
-                  </div>
-                );
-              })}
+              {(() => {
+                const total = referralProgress.convertedCount || 0;
+                const mod = total % 3;
+                const displayCount = total === 0 ? 0 : (mod === 0 ? 3 : mod);
+                return [0,1,2].map((i) => {
+                  const achieved = i < displayCount;
+                  return (
+                    <div key={i} className={`px-2 py-1 rounded-full text-xs border flex items-center gap-1 ${achieved ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-white border-[var(--color-neutral-300)] text-[var(--color-neutral-600)]'}`}>
+                      {achieved ? (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" />
+                        </svg>
+                      )}
+                      <span>Invite {i+1}</span>
+                    </div>
+                  );
+                });
+              })()}
             </div>
             <p className="text-sm text-gray-700 mt-2">
               {referralProgress.invitesToNext === 0
@@ -150,7 +162,7 @@ export default function ReferralDashboard() {
               3
             </div>
             <p className="text-sm text-gray-600">
-              Invite 3 → +6 months total (max 6 months/year)
+              Invite 3 → +6 months total, then 50% off afterward (max 6 months/year)
             </p>
           </div>
         </div>

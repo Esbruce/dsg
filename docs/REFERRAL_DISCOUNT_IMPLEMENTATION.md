@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the implementation of the referral discount system that provides referrers with a 50% discount on their subscription when their referred friend upgrades to a paid plan.
+This document outlines the implementation of the referral discount system that provides referrers with a 50% discount on their subscription when they have referred at least 3 friends who upgraded to a paid plan.
 
 ## Database Schema
 
@@ -137,16 +137,18 @@ Updated `app/components/billing/ReferralDashboard.tsx` to:
 ### Optional
 
 - `SUBSCRIPTION_PRICE_CENTS`: Defaults to 250 (£2.50) if not set
+- `REFERRAL_DISCOUNT_THRESHOLD`: Minimum number of converted referrals to unlock discount (default 3)
+- `REFERRAL_DISCOUNT_GRANDFATHER`: If `true`, existing users with `discounted=true` remain eligible regardless of count
 
 ## User Flow
 
 1. **User A** shares their referral link with **User B**
 2. **User B** signs up using the referral link (sets `referred_by` to User A's UUID)
 3. **User B** upgrades to paid subscription
-4. Stripe webhook triggers `convertReferral` for User B
-5. User A's `discounted` flag is set to `true`
-6. User A receives £10 credit on their Stripe account
-7. User A sees 50% discount on their subscription in the UI
+4. Stripe webhook triggers `convertReferral` for User B (on successful checkout)
+5. System counts User A's successful invites (signups); when they reach 3, User A's `discounted` flag is set to `true`
+6. If User A already has an active subscription, the 50% coupon is applied retroactively
+7. On subsequent subscriptions or invoices, the coupon ensures the 50% recurring discount
 
 ## Testing
 

@@ -241,7 +241,7 @@ export default function AccountPage() {
 
         {/* Invite Friends */}
         <div className="mt-10">
-          <SectionHeader title="Invite Friends" description="Share DSG with colleagues and unlock discounts." />
+          <SectionHeader title="Invite Friends" description="Invite colleagues. Unlock 50% off once 3 friends subscribe." />
           <ReferralDashboard />
         </div>
 

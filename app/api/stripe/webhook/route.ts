@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { referralService } from '@/lib/referral/referral-service';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -327,7 +328,12 @@ export async function POST(req: NextRequest) {
           console.error('Failed to update user payment status:', updateError);
         }
 
-        // Referral conversion now happens at signup; no action needed here
+        // Convert referral on first successful checkout (ensures conversion flow is triggered)
+        try {
+          await referralService.convertReferral(userId);
+        } catch (convErr) {
+          console.error('Failed to process referral conversion on checkout:', convErr);
+        }
 
         break;
       }
@@ -346,40 +352,46 @@ export async function POST(req: NextRequest) {
           console.error('Failed to update user for subscription creation:', error);
         }
 
-        // Apply referral discount to subscription if user has discount
+        // Apply referral discount to subscription if user is eligible by threshold/grandfather
         try {
-          const { data: user } = await supabaseAdmin
+          // Resolve user by customer
+          const { data: userByCustomer } = await supabaseAdmin
             .from('users')
-            .select('discounted')
+            .select('id')
             .eq('stripe_customer_id', customerId)
             .single();
 
-          if (user?.discounted) {
+          if (!userByCustomer?.id) {
+            break;
+          }
+
+          const status = await referralService.getReferrerDiscountStatus(userByCustomer.id);
+          if (status.hasDiscount) {
             // Check if we have a referral discount coupon
             let couponId = process.env.STRIPE_REFERRAL_COUPON_ID;
-            
             if (!couponId) {
-              // Create the coupon if it doesn't exist
               const coupon = await stripe.coupons.create({
-                percent_off: 50, // 50% discount
+                percent_off: 50,
                 duration: 'forever',
                 name: 'Referral Discount',
-                metadata: {
-                  discount_type: 'referral',
-                  discount_percentage: '50'
-                }
+                metadata: { discount_type: 'referral', discount_percentage: '50' }
               });
               couponId = coupon.id;
               console.log('Created referral discount coupon for subscription:', couponId);
             }
 
-            // Apply the coupon to the subscription
-            await stripe.subscriptions.update(subscription.id, {
-              // @ts-ignore - Stripe API accepts coupon parameter
-              coupon: couponId
-            });
-            
-            console.log('Applied referral discount coupon to subscription:', subscription.id);
+            // Avoid reapplying if already present
+            const current = await stripe.subscriptions.retrieve(subscription.id, { expand: ['discount.coupon'] as any });
+            const alreadyApplied = (current as any)?.discount?.coupon?.id === couponId;
+            if (!alreadyApplied) {
+              await stripe.subscriptions.update(subscription.id, {
+                // @ts-ignore - Stripe API accepts coupon parameter
+                coupon: couponId
+              });
+              console.log('Applied referral discount coupon to subscription:', subscription.id);
+            } else {
+              console.log('Coupon already applied to subscription:', subscription.id);
+            }
           }
         } catch (discountError) {
           console.error('Failed to apply referral discount to subscription:', discountError);
