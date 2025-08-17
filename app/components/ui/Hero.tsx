@@ -4,9 +4,9 @@ export default function Hero() {
   return (
     <div className="text-center py-6">
       <div className="mb-3 flex justify-center">
-        <span className="inline-flex items-center rounded-full border border-[var(--color-primary-light)] bg-[color:rgba(6,190,190,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary-dark)]">
+        {/* <span className="inline-flex items-center rounded-full border border-[var(--color-primary-light)] bg-[color:rgba(6,190,190,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary-dark)]">
           BETA
-        </span>
+        </span> */}
       </div>
       <h1 className="text-4xl font-bold mb-4 text-[var(--color-neutral-900)]">
         Medical Notes to{" "} <br /> 

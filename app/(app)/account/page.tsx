@@ -241,7 +241,7 @@ export default function AccountPage() {
 
         {/* Invite Friends */}
         <div className="mt-10">
-          <SectionHeader title="Invite Friends" description="Invite colleagues. Unlock 50% off once 3 friends subscribe." />
+          <SectionHeader title="Invite Friends" description="Invite colleagues. Your 3rd referral grants 6 months unlimited, then 50% off afterward." />
           <ReferralDashboard />
         </div>
 
