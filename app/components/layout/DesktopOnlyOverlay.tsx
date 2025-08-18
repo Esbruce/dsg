@@ -21,7 +21,7 @@ export default function DesktopOnlyOverlay() {
 
         {/* Description */}
         <p className="text-base text-[var(--color-neutral-600)] mb-8 leading-relaxed max-w-md mx-auto">
-          Sorry please use a larger screen device. 
+          Sorry please use a device with a larger screen. 
           
         </p>
 
