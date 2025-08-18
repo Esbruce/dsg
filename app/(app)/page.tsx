@@ -378,90 +378,98 @@ export default function Home() {
   
   return (
     <div className="h-full flex flex-col pb-[5vw] px-[10vw]">
-      {/* Rate Limit Overlay */}
-      <Limit
-        isVisible={showLimitOverlay}
-        onUpgrade={handleUpgrade}
-        onClose={handleCloseLimitOverlay}
-      />
-      {/* Hero Section - Only visible when not showing output */}
-      {!showOutput && !isProcessing && (
-        <section className="px-6 py-6 flex-shrink-0">
-          <Hero />
-        </section>
-      )}
-
-      {/* Input Section or Login Modal - Only visible when not processing and not showing output */}
-      {!isProcessing && !showOutput && !isAuthProcessing && (
-        <section className="flex-1">
-          {isInlineLoginModalOpen ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] max-w-md w-full p-8">
-                <LoginModal onClose={hideInlineLoginModal} />
-              </div>
-            </div>
-          ) : (
-            <InputSection
-              medicalNotes={medicalNotes}
-              onNotesChange={(e) => setMedicalNotes(e.target.value)}
-              onClear={handleClear}
-              confirmNoPII={confirmNoPII}
-              onConfirmNoPIIChange={setConfirmNoPII}
-              onProcess={handleProcess}
-              isProcessing={isProcessing}
+      {showLimitOverlay ? (
+        <section className="flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            <Limit
+              isVisible={true}
+              onUpgrade={handleUpgrade}
+              onClose={handleCloseLimitOverlay}
             />
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* Hero Section - Only visible when not showing output */}
+          {!showOutput && !isProcessing && (
+            <section className="px-6 py-6 flex-shrink-0">
+              <Hero />
+            </section>
           )}
-        </section>
-      )}
 
-      {/* Auth Processing State - Only visible when processing authentication */}
-      {isAuthProcessing && (
-        <section className="w-full h-full flex-1 flex items-center justify-center">
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
-              <p className="text-lg font-medium text-gray-700">
-                Loading your account...
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Preparing to generate your summary
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
+          {/* Input Section or Login Modal - Only visible when not processing and not showing output */}
+          {!isProcessing && !showOutput && !isAuthProcessing && (
+            <section className="flex-1">
+              {isInlineLoginModalOpen ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] max-w-md w-full p-8">
+                    <LoginModal onClose={hideInlineLoginModal} />
+                  </div>
+                </div>
+              ) : (
+                <InputSection
+                  medicalNotes={medicalNotes}
+                  onNotesChange={(e) => setMedicalNotes(e.target.value)}
+                  onClear={handleClear}
+                  confirmNoPII={confirmNoPII}
+                  onConfirmNoPIIChange={setConfirmNoPII}
+                  onProcess={handleProcess}
+                  isProcessing={isProcessing}
+                />
+              )}
+            </section>
+          )}
 
-      {/* Processing State - Only visible when processing */}
-      {isProcessing && (
-        <section className=" w-full h-full flex-1 flex items-center justify-center">
-          <div className="w-full h-full flex items-center justify-center">
-            <LoadingState />
-          </div>
-        </section>
-      )}
+          {/* Auth Processing State - Only visible when processing authentication */}
+          {isAuthProcessing && (
+            <section className="w-full h-full flex-1 flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
+                  <p className="text-lg font-medium text-gray-700">
+                    Loading your account...
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Preparing to generate your summary
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
 
-      {/* Output Section - Only visible when showing output and not processing */}
-      {showOutput && !isProcessing && (
-        <section className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-auto px-4 pb-4">
-            <div className="w-full max-w-7xl mx-auto">
-              <OutputSection
-                summary={summary}
-                dischargePlan={dischargePlan}
-                onSummaryChange={(e) => setSummary(e.target.value)}
-                onDischargePlanChange={(e) =>
-                  setDischargePlan(e.target.value)
-                }
-                onCopySummary={handleCopySummary}
-                onCopyDischargePlan={handleCopyDischargePlan}
-                summaryCopied={summaryCopied}
-                dischargePlanCopied={dischargePlanCopied}
-                isVisible={showOutput}
-                onBackToInput={() => setShowOutput(false)}
-              />
-            </div>
-          </div>
-        </section>
+          {/* Processing State - Only visible when processing */}
+          {isProcessing && (
+            <section className=" w-full h-full flex-1 flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
+                <LoadingState />
+              </div>
+            </section>
+          )}
+
+          {/* Output Section - Only visible when showing output and not processing */}
+          {showOutput && !isProcessing && (
+            <section className="flex-1 flex flex-col">
+              <div className="flex-1 overflow-auto px-4 pb-4">
+                <div className="w-full max-w-7xl mx-auto">
+                  <OutputSection
+                    summary={summary}
+                    dischargePlan={dischargePlan}
+                    onSummaryChange={(e) => setSummary(e.target.value)}
+                    onDischargePlanChange={(e) =>
+                      setDischargePlan(e.target.value)
+                    }
+                    onCopySummary={handleCopySummary}
+                    onCopyDischargePlan={handleCopyDischargePlan}
+                    summaryCopied={summaryCopied}
+                    dischargePlanCopied={dischargePlanCopied}
+                    isVisible={showOutput}
+                    onBackToInput={() => setShowOutput(false)}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   );
