@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "../../lib/supabase/client";
+import { useRouter } from "next/navigation";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
 import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
@@ -15,6 +16,7 @@ export default function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const router = useRouter();
   const { clearRequestIntent } = useRequestIntent();
   // User data states (keep existing pattern for animations)
   const [usageCount, setUsageCount] = useState(0);
@@ -216,6 +218,21 @@ export default function AppLayout({
         setIsFetching(false);
         // Clear any stored request intent on logout
         clearRequestIntent();
+
+        // If the user signs out while on a protected page, redirect them to login with returnTo
+        try {
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname + window.location.search;
+            const isProtected = window.location.pathname.startsWith('/account') || window.location.pathname.startsWith('/settings');
+            const alreadyOnLogin = window.location.pathname.startsWith('/login');
+            if (isProtected && !alreadyOnLogin) {
+              const encoded = encodeURIComponent(currentPath || '/');
+              router.push(`/login?returnTo=${encoded}`);
+            }
+          }
+        } catch (err) {
+          // no-op: best-effort redirect
+        }
       } else if (event === 'SIGNED_IN' && session) {
         console.log('🔍 SIGNED_IN event triggered with session:', session.user.id);
         // Set authentication state immediately and trigger loading state
