@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import LoginModal from '@/app/components/auth/LoginModal'
 import { useUserData } from '@/lib/hooks/useUserData'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { isAuthenticated, isLoading, refreshUserData } = useUserData()
@@ -42,6 +42,18 @@ export default function LoginPage() {
         <LoginModal onAuthSuccess={handleAuthSuccess} />
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] max-w-md w-full p-8 text-center">Loading...</div>
+      </div>
+    }>
+      <LoginPageInner />
+    </Suspense>
   )
 }
 

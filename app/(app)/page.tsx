@@ -61,9 +61,13 @@ export default function Home() {
       const intent = {
         type: "action" as const,
         name: "generate_summary",
-        payload: { medicalNotes },
+        payload: { medicalNotes, confirmNoPII },
       };
       setRequestIntent(intent);
+      // Persist a lightweight flag so we can show processing immediately after return
+      try {
+        sessionStorage.setItem("dsg_auth_processing", "1");
+      } catch {}
       router.push('/login?returnTo=%2F');
       return;
     }
@@ -78,34 +82,45 @@ export default function Home() {
     setIsProcessing(true);
 
     try {
-      // Call generate-summary API (handles auth, quota, OpenAI, and DB insertion)
-      const summaryRes = await fetch("/api/generate_summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ medical_notes: medicalNotes }), // No user_id needed - authenticated server-side
-      });
+      // Helper to perform the request
+      const request = async () =>
+        fetch("/api/generate_summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ medical_notes: medicalNotes }), // No user_id needed - authenticated server-side
+        });
 
-      let summaryData;
-      try {
-        const summaryText = await summaryRes.text();
-        summaryData = summaryText ? JSON.parse(summaryText) : {};
-      } catch (err) {
-        throw new Error("Invalid response from summary API");
+      // Call generate-summary API (handles auth, quota, OpenAI, and DB insertion)
+      let summaryRes = await request();
+
+      // Transient 401 right after login: single silent retry after a short delay
+      if (summaryRes.status === 401) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        summaryRes = await request();
       }
 
       if (!summaryRes.ok) {
+        // Attempt to parse error payload for message; ignore failures
+        let errorMessage: string | undefined;
+        try {
+          const errJson = await summaryRes.json();
+          if (errJson && typeof errJson.error === 'string') {
+            errorMessage = errJson.error;
+          }
+        } catch {}
         if (summaryRes.status === 403) {
           setShowLimitOverlay(true);
           setIsProcessing(false);
           return;
         }
         throw new Error(
-          summaryData.error ||
-            `Summary generation failed: ${summaryRes.status} ${summaryRes.statusText}`
+          errorMessage || `Summary generation failed: ${summaryRes.status} ${summaryRes.statusText}`
         );
       }
 
+      // Success path: parse JSON body
+      const summaryData = await summaryRes.json();
       const summaryText = summaryData.summary || "";
       const dischargePlanText = summaryData.discharge_plan || ""; // Assuming API returns both
 
@@ -158,6 +173,16 @@ export default function Home() {
     handleProcessRef.current = handleProcess;
   }, [handleProcess]);
 
+  // On mount, if we have an auth-processing flag from a pre-login redirect, show the preparing state immediately
+  useEffect(() => {
+    try {
+      const flag = sessionStorage.getItem("dsg_auth_processing");
+      if (flag === "1") {
+        setIsAuthProcessing(true);
+      }
+    } catch {}
+  }, []);
+
   // After login on a dedicated page, auto-run generation when returning with intent
   useEffect(() => {
     console.log("🔍 Auth effect triggered:", { isAuthenticated, isLoading });
@@ -174,48 +199,32 @@ export default function Home() {
         console.log("📝 Found generate_summary intent, setting up auto-process...");
         const { payload } = requestIntent.payload as ActionIntent<{
           medicalNotes: string;
+          confirmNoPII?: boolean;
         }>;
         
         if (payload && payload.medicalNotes) {
           setMedicalNotes(payload.medicalNotes);
+          if (payload.confirmNoPII) {
+            setConfirmNoPII(true);
+          }
           autoProcessStartedRef.current = true;
-          
-          const waitForUserData = async () => {
-            console.log("⏳ Waiting for user data to load before auto-processing...");
-            const checkLoading = () => {
-              return new Promise<void>((resolve) => {
-                let attempts = 0;
-                const maxAttempts = 50;
-                const check = () => {
-                  attempts++;
-                  if (!isLoadingRef.current || attempts >= maxAttempts) {
-                    resolve();
-                  } else {
-                    setTimeout(check, 100);
-                  }
-                };
-                check();
-              });
-            };
+          // Start processing almost immediately; avoid waiting on client-side user data
+          setTimeout(() => {
             try {
-              await checkLoading();
-              setTimeout(() => {
-                try {
-                  handleProcessRef.current?.();
-                } catch (error) {
-                  console.error("❌ Error calling handleProcess:", error);
-                }
-                clearRequestIntent();
-                autoProcessStartedRef.current = false;
-              }, 200);
+              handleProcessRef.current?.();
             } catch (error) {
-              console.error("❌ Error in waitForUserData:", error);
-              autoProcessStartedRef.current = false;
+              console.error("❌ Error calling handleProcess:", error);
             }
-          };
-          
-          waitForUserData();
+            clearRequestIntent();
+            autoProcessStartedRef.current = false;
+          }, 100);
         }
+      } else {
+        // Authenticated but no valid intent; clear any stale preparing flag/state
+        try {
+          sessionStorage.removeItem("dsg_auth_processing");
+        } catch {}
+        setIsAuthProcessing(false);
       }
     }
   }, [
@@ -223,7 +232,44 @@ export default function Home() {
     isLoading,
     getRequestIntent,
     clearRequestIntent,
+    intent,
   ]);
+
+  // Once real processing begins, clear the temporary auth-processing flag and hide the preparing state
+  useEffect(() => {
+    if (isProcessing) {
+      try {
+        sessionStorage.removeItem("dsg_auth_processing");
+      } catch {}
+      setIsAuthProcessing(false);
+    }
+  }, [isProcessing]);
+
+  // Safety timeout to avoid a stuck preparing state if the user abandons login or intent is missing
+  useEffect(() => {
+    if (isAuthProcessing && !isProcessing) {
+      const timer = setTimeout(() => {
+        try {
+          sessionStorage.removeItem("dsg_auth_processing");
+        } catch {}
+        setIsAuthProcessing(false);
+      }, 8000); // 8 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthProcessing, isProcessing]);
+
+  // If unauthenticated and there is no intent, clear any stale preparing state quickly
+  useEffect(() => {
+    if (!isAuthenticated && isAuthProcessing) {
+      const hasIntent = !!intent;
+      if (!hasIntent) {
+        try {
+          sessionStorage.removeItem("dsg_auth_processing");
+        } catch {}
+        setIsAuthProcessing(false);
+      }
+    }
+  }, [intent, isAuthenticated, isAuthProcessing]);
   // Handle checkout success - refresh user data and show success message
   useEffect(() => {
     const checkoutStatus = searchParams.get("checkout");

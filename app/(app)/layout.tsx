@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "../../lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
 import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
@@ -17,6 +17,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const { clearRequestIntent } = useRequestIntent();
   // User data states (keep existing pattern for animations)
   const [usageCount, setUsageCount] = useState(0);
@@ -319,8 +320,8 @@ export default function AppLayout({
     }
   };
 
-  // Show loading state while checking authentication
-  if (isLoading && !isAuthenticated) {
+  // Show loading state while checking authentication, but never block the dedicated login page
+  if (isLoading && !isAuthenticated && pathname !== '/login') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">

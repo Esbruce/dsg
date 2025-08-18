@@ -23,21 +23,23 @@ const REQUEST_INTENT_KEY = 'dsg_request_intent';
 export function useRequestIntent() {
   const [intent, setIntent] = useState<FullRequestIntent | null>(null);
 
-  // Load intent from localStorage on mount
+  // Load intent from sessionStorage (preferred) or localStorage with a short TTL
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(REQUEST_INTENT_KEY);
+      const stored = sessionStorage.getItem(REQUEST_INTENT_KEY) || localStorage.getItem(REQUEST_INTENT_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as FullRequestIntent;
-        // Only use intent if it's less than 1 hour old
-        if (Date.now() - parsed.timestamp < 60 * 60 * 1000) {
+        // Only use intent if it's less than 5 minutes old
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
           setIntent(parsed);
         } else {
+          sessionStorage.removeItem(REQUEST_INTENT_KEY);
           localStorage.removeItem(REQUEST_INTENT_KEY);
         }
       }
     } catch (error) {
       console.error('Error loading request intent:', error);
+      sessionStorage.removeItem(REQUEST_INTENT_KEY);
       localStorage.removeItem(REQUEST_INTENT_KEY);
     }
   }, []);
@@ -49,7 +51,10 @@ export function useRequestIntent() {
     };
     setIntent(newIntent);
     try {
-      localStorage.setItem(REQUEST_INTENT_KEY, JSON.stringify(newIntent));
+      // Prefer sessionStorage for shorter-lived and tab-scoped persistence
+      sessionStorage.setItem(REQUEST_INTENT_KEY, JSON.stringify(newIntent));
+      // Ensure any legacy copy in localStorage is removed
+      localStorage.removeItem(REQUEST_INTENT_KEY);
     } catch (error) {
       console.error('Error saving request intent:', error);
     }
@@ -58,6 +63,7 @@ export function useRequestIntent() {
   const clearRequestIntent = useCallback(() => {
     setIntent(null);
     try {
+      sessionStorage.removeItem(REQUEST_INTENT_KEY);
       localStorage.removeItem(REQUEST_INTENT_KEY);
     } catch (error) {
       console.error('Error clearing request intent:', error);
