@@ -1,29 +1,58 @@
+"use client";
 import React from "react";
 
 export default function DesktopOnlyOverlay() {
+  const currentUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopyLink = async () => {
+    try {
+      if (currentUrl) {
+        await navigator.clipboard.writeText(currentUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (error) {
+      setCopied(false);
+    }
+  };
+
   return (
     <div className="desktop-only-overlay">
-      <div className="max-w-lg px-6">
+      <div className="max-w-xl w-full px-6 mx-auto">
         {/* Logo/Brand */}
-        <div className="mb-2">
-          <h2 className="text-sm font-medium text-[var(--color-primary)] uppercase tracking-widest mb-2">
-            DSG
-          </h2>
-          <h1 className="text-lg font-semibold text-[var(--color-neutral-900)] tracking-tight">
-            Discharge Summary Generator
-          </h1>
+
+        {/* Desktop requirement */}
+        <div className="bg-[var(--color-bg-2)] border border-[var(--color-neutral-200)] rounded-xl p-5 mb-6">
+          <h3 className="text-sm font-medium text-[var(--color-primary)] mb-2 uppercase tracking-wide">
+            Notice
+          </h3>
+          <p className="text-sm text-[var(--color-neutral-700)] leading-relaxed">
+            We apologise. For usability and readability, DSG is currently designed for use only on devices with larger screens. Please try on a computer or tablet.
+          </p>
         </div>
 
-        {/* Title */}
-        {/* <h2 className="text-2xl font-semibold text-[var(--color-neutral-900)] mb-4 tracking-tight">
-          Desktop Experience Required
-        </h2> */}
-
-        {/* Description */}
-        <p className="text-base text-[var(--color-neutral-600)] mb-8 leading-relaxed max-w-md mx-auto">
-          Sorry please use a device with a larger screen. 
-          
-        </p>
+        {/* About the product */}
+        <div className="rounded-xl border border-[var(--color-neutral-200)] p-5 mb-6">
+          <h3 className="text-sm font-medium text-[var(--color-neutral-900)] mb-3 tracking-tight">
+            What you can expect when using DSG
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 text-sm text-[var(--color-neutral-700)]">
+              <div className="w-1.5 h-1.5 mt-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0"></div>
+              <span>Structured summaries and plans created with AI, that are clear, consistent, and easy to export.</span>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-[var(--color-neutral-700)]">
+              <div className="w-1.5 h-1.5 mt-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0"></div>
+              <span> A design that focuses on speed for the user whilst maintaining accuracy.</span>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-[var(--color-neutral-700)]">
+              <div className="w-1.5 h-1.5 mt-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0"></div>
+              <span>Your data staying private and secure as per our privacy policy.</span>
+            </div>
+          </div>
+        </div>
 
         {/* Requirements */}
         <div className="bg-[var(--color-bg-2)] border border-[var(--color-neutral-200)] rounded-xl p-6 mb-8">
@@ -43,6 +72,28 @@ export default function DesktopOnlyOverlay() {
               <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0"></div>
               <span>Stable internet connection</span>
             </div>
+          </div>
+        </div>
+
+        {/* Continue on desktop actions */}
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-[var(--color-neutral-900)] mb-3 tracking-tight">
+            Continue on your computer
+          </h3>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center justify-center rounded-lg border border-[var(--color-neutral-300)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-neutral-900)] hover:bg-[var(--color-bg-2)] transition-colors"
+            >
+              {copied ? "Link copied" : "Copy link"}
+            </button>
+            <a
+              href={`mailto:?subject=${encodeURIComponent("Open DSG on my computer")}&body=${encodeURIComponent("Please open this link on your computer: " + currentUrl)}`}
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+            >
+              Email me this link
+            </a>
           </div>
         </div>
 
