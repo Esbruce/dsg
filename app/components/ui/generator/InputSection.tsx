@@ -23,7 +23,7 @@ export default function InputSection({
   return (
     <div className="w-full h-full flex flex-col">
       {/* Input Container */}
-      <div className="backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border-1 border-[var(--color-neutral-300)] rounded-2xl p-4 md:p-8 flex-1 flex flex-col">
+      <div className="backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-4 md:p-8 flex-1 flex flex-col">
         <div className="relative z-[3] flex-1 flex flex-col">
           {/* Medical Notes Input */}
           <div className="relative flex-1 flex flex-col mb-4">
@@ -147,15 +147,15 @@ export default function InputSection({
             </button>
           </div>
 
-          {/* Mobile PII + Generate row */}
-          <div className="md:hidden flex items-stretch gap-3">
-            <div className="flex items-center gap-2 p-3 bg-[var(--color-warning)]/20 border border-[var(--color-warning)]/50 rounded-xl flex-1">
+          {/* Mobile PII on top, Generate button below */}
+          <div className="md:hidden flex flex-col gap-3">
+            <div className="flex items-start gap-3 p-3 bg-[var(--color-warning)]/20 border border-[var(--color-warning)]/50 rounded-xl w-full">
               <input
                 id="no-pii-checkbox-mobile"
                 type="checkbox"
                 checked={confirmNoPII}
                 onChange={(e) => onConfirmNoPIIChange(e.target.checked)}
-                className="w-4 h-4"
+                className="mt-1 w-4 h-4"
               />
               <label htmlFor="no-pii-checkbox-mobile" className="text-[var(--color-neutral-800)] font-medium cursor-pointer typography-small leading-snug">
                 I confirm no patient-identifiable information has been entered
@@ -164,7 +164,7 @@ export default function InputSection({
             <button
               onClick={onProcess}
               disabled={isProcessing || !medicalNotes.trim() || !confirmNoPII}
-              className={`px-4 py-3 rounded-lg typography-button font-semibold whitespace-nowrap self-stretch flex items-center gap-2 ${
+              className={`w-full px-4 py-3 rounded-lg typography-button font-semibold self-stretch flex items-center justify-center gap-2 ${
                 isProcessing || !medicalNotes.trim() || !confirmNoPII
                   ? 'bg-gray-200 text-gray-400'
                   : 'bg-gradient-to-r from-slate-900 to-slate-800 text-white hover:from-slate-800 hover:to-slate-700'
