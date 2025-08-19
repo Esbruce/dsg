@@ -57,9 +57,14 @@ export default function PhoneInput({ phoneNumber, onPhoneNumberChange, onSubmit,
             value={phoneNumber}
             onChange={onPhoneNumberChange}
             placeholder="7849 484659"
-            className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:border-transparent text-gray-900 placeholder-gray-500"
+            className="w-full pl-12 pr-3 py-3 border border-[var(--color-neutral-300)] rounded-lg focus:border-transparent text-gray-900 placeholder-gray-500"
             disabled={isProcessing}
             maxLength={11} // UK numbers are max 10 digits + space
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="tel"
+            aria-label="UK Phone Number"
+            enterKeyHint="go"
           />
         </div>
         <p className="mt-1 text-xs text-gray-500">
@@ -93,7 +98,7 @@ export default function PhoneInput({ phoneNumber, onPhoneNumberChange, onSubmit,
       <button
         type="submit"
         disabled={isProcessing || !isFormValid}
-        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-medium transition-colors"
       >
         {isProcessing ? "Sending..." : "Send Code"}
       </button>

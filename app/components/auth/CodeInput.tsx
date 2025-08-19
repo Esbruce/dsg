@@ -60,8 +60,13 @@ export default function CodeInput({
           onChange={onOTPChange}
           placeholder="123456"
           maxLength={6}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-transparent text-center text-lg tracking-widest text-gray-900 placeholder-gray-500"
+          className="w-full px-4 py-3 border border-[var(--color-neutral-300)] rounded-lg focus:border-transparent text-center text-xl tracking-widest text-gray-900 placeholder-gray-500"
           disabled={isProcessing}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="one-time-code"
+          aria-label="Verification code"
+          enterKeyHint="done"
         />
         {error && (
           <p className="mt-1 text-sm text-red-600">{error}</p>
@@ -77,7 +82,7 @@ export default function CodeInput({
       <button
         type="submit"
         disabled={isProcessing || !otp || otp.length !== 6}
-        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-medium transition-colors"
       >
         {isProcessing ? "Verifying..." : "Verify Code"}
       </button>

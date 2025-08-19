@@ -206,11 +206,11 @@ function SignupPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-md">
+        <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] py-8 px-4 sm:px-10">
           <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
               Welcome to DSG
             </h2>
             <p className="text-gray-600 mt-2">
@@ -246,6 +246,7 @@ function SignupPageContent() {
                       onVerify={handleCaptchaVerify}
                       onError={handleCaptchaError}
                       className="flex justify-center"
+                      size="flexible"
                     />
                     {captchaError && (
                       <p className="mt-2 text-sm text-red-600">{captchaError}</p>
@@ -307,9 +308,9 @@ function SignupPageContent() {
 export default function SignupPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] py-8 px-4 sm:px-10">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-gray-300 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-600">Loading...</p>
