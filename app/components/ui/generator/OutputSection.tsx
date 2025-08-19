@@ -32,10 +32,10 @@ export default function OutputSection({
   return (
     <div className="flex flex-col h-full w-full">
       {/* Back to Input Button */}
-      <div className="mb-8">
+      <div className="mb-4 md:mb-8">
         <button
           onClick={onBackToInput}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-lg transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white rounded-lg transition-colors shadow-sm typography-button"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -45,22 +45,22 @@ export default function OutputSection({
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-8 h-full flex-1">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-8 h-full flex-1">
 
         {/* AI Summary Panel */}
-        <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-8 flex flex-col">
+        <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-4 md:p-8 flex flex-col">
           <div className="mb-6 flex flex-col">
             <div className="flex items-center justify-center pb-4">
-              <h2 className="text-2xl font-semibold text-[var(--color-neutral-900)]">Summary</h2>
+              <h2 className="typography-h2 font-semibold text-[var(--color-neutral-900)]">Summary</h2>
             </div>
-            <div className="border-b border-[var(--color-neutral-300)] -mx-8"></div>
+            <div className="border-b border-[var(--color-neutral-300)] -mx-4 md:-mx-8"></div>
           </div>
           
           <textarea
             value={summary}
             onChange={onSummaryChange}
             placeholder="AI summary will appear here..."
-            className="w-full px-0 py-4 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[400px] text-base leading-relaxed"
+            className="w-full px-0 py-4 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[300px] md:min-h-[400px] typography-body"
           />
           
           <div className="mt-4 flex items-center justify-between">
@@ -80,19 +80,19 @@ export default function OutputSection({
         </div>
 
         {/* Discharge Plan Panel */}
-        <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-8 flex flex-col">
+        <div className="flex-1 backdrop-blur-2xl bg-[var(--color-bg-1)] shadow-symmetric border border-[var(--color-neutral-300)] rounded-2xl p-4 md:p-8 flex flex-col">
           <div className="mb-6 flex flex-col">
             <div className="flex items-center justify-center pb-4">
-              <h2 className="text-2xl font-semibold text-[var(--color-neutral-900)]">Discharge Plan</h2>
+              <h2 className="typography-h2 font-semibold text-[var(--color-neutral-900)]">Discharge Plan</h2>
             </div>
-            <div className="border-b border-[var(--color-neutral-300)] -mx-8"></div>
+            <div className="border-b border-[var(--color-neutral-300)] -mx-4 md:-mx-8"></div>
           </div>
           
           <textarea
             value={dischargePlan}
             onChange={onDischargePlanChange}
             placeholder="Discharge plan will appear here..."
-            className="w-full px-0 py-4 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[400px] text-base leading-relaxed"
+            className="w-full px-0 py-4 rounded-xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-[var(--color-neutral-700)] placeholder-[var(--color-neutral-400)] flex-1 min-h-[300px] md:min-h-[400px] typography-body"
           />
           
           <div className="mt-4 flex items-center justify-between">

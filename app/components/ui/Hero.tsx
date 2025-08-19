@@ -2,20 +2,20 @@ import React from "react";
 
 export default function Hero() {
   return (
-    <div className="text-center py-6">
+    <div className="text-center py-6 sm:py-8 md:py-12 px-4">
       <div className="mb-3 flex justify-center">
         {/* <span className="inline-flex items-center rounded-full border border-[var(--color-primary-light)] bg-[color:rgba(6,190,190,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary-dark)]">
           BETA
         </span> */}
       </div>
-      <h1 className="text-4xl font-bold mb-4 text-[var(--color-neutral-900)]">
-        Medical Notes to{" "} <br /> 
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight text-[var(--color-neutral-900)]">
+        Medical Notes to{" "}<br className="hidden md:block" /> 
         <span className="text-[var(--color-primary)]">
           Discharge Summary
         </span>{" "}
         in Seconds
       </h1>
-      <p className="text-lg text-[var(--color-neutral-600)]">
+      <p className="text-base sm:text-lg text-[var(--color-neutral-600)] max-w-2xl mx-auto">
         Made with doctors, for doctors.
       </p>
       

@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+type HeaderProps = {
+  onOpenMobileMenu?: () => void;
+};
 import { logout } from "@/app/login/actions";
 import { useRouter } from "next/navigation";
 import { useUserData } from "@/lib/hooks/useUserData";
@@ -11,7 +14,7 @@ import {
   normalizeUKPhoneNumber,
 } from "@/lib/utils/phone";
 
-export default function Header() {
+export default function Header({ onOpenMobileMenu }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -94,9 +97,22 @@ export default function Header() {
   };
 
   return (
-    <header className="w-full bg-gradient-to-b from-[var(--color-bg-2)] via-[var(--color-bg-2)] to-transparent p-5">
-      <div className="flex items-center justify-end gap-6">
-        <nav className="flex items-center gap-10">
+    <header className="w-full bg-gradient-to-b from-[var(--color-bg-2)] via-[var(--color-bg-2)] to-transparent p-4 md:p-5">
+      <div className="flex items-center justify-between gap-4">
+        {/* Left: Mobile hamburger */}
+        {/* Visible until ~1152px, hidden at >=1152 via custom helper */}
+        <button
+          className="hide-at-1152 p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          aria-label="Open menu"
+          onClick={() => onOpenMobileMenu?.()}
+        >
+          <svg className="w-6 h-6 text-[var(--color-neutral-700)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Right: Primary nav */}
+        <nav className="flex items-center gap-6 md:gap-10 ml-auto typography-nav">
           <button
             onClick={() => {
               hideInlineLoginModal();

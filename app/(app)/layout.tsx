@@ -5,7 +5,7 @@ import { createClient } from "../../lib/supabase/client";
 import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
-import DesktopOnlyOverlay from "../components/layout/DesktopOnlyOverlay";
+import MobileDrawer from "../components/layout/MobileDrawer";
 import { LoginModalProvider, SessionTimeoutHandler } from "../components/auth";
 import { processReferralUUIDFromURL } from "../../lib/auth/referral-utils";
 import { useRequestIntent } from "../../lib/hooks/useRequestIntent";
@@ -35,6 +35,7 @@ export default function AppLayout({
   const [referralProgress, setReferralProgress] = useState<any>(null);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [unlimitedActive, setUnlimitedActive] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const maxUsage = 3;
 
@@ -335,29 +336,28 @@ export default function AppLayout({
   return (
     <LoginModalProvider>
       <UserDataContext.Provider value={contextValue}>
-        {/* Desktop-only overlay for small screens */}
-        <DesktopOnlyOverlay />
-        
-        {/* Main app content - hidden on mobile */}
-        <div className="main-app-content flex h-screen bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)] overflow-hidden">
-          {/* Sidebar - Fixed width - Use display values for unauthenticated users */}
-          <Sidebar
-            usageCount={displayUsageCount}
-            maxUsage={maxUsage}
-            inviteLink={inviteLink}
-            onCopyInviteLink={handleCopyInviteLink}
-            inviteLinkCopied={inviteLinkCopied}
-            isPaid={displayIsPaid}
-            onGoUnlimited={handleGoUnlimited}
-            isAuthenticated={isAuthenticated}
-            isLoading={isLoading}
-          />
+        {/* Main app content */}
+        <div className="main-app-content flex min-h-[100dvh] bg-gradient-to-br from-[var(--color-bg-2)] via-[var(--color-bg-3)] to-[var(--color-bg-4)] overflow-hidden">
+          {/* Sidebar - show from ~1152px via custom helper */}
+          <div className="hidden show-at-1152">
+            <Sidebar
+              usageCount={displayUsageCount}
+              maxUsage={maxUsage}
+              inviteLink={inviteLink}
+              onCopyInviteLink={handleCopyInviteLink}
+              inviteLinkCopied={inviteLinkCopied}
+              isPaid={displayIsPaid}
+              onGoUnlimited={handleGoUnlimited}
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+            />
+          </div>
 
           {/* Main Content Area - Takes remaining space */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Header - Fixed at top */}
             <div className="flex-shrink-0 z-50">
-              <Header />
+              <Header onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
             </div>
             
             {/* Content Area - Scrollable */}
@@ -366,6 +366,29 @@ export default function AppLayout({
             </main>
           </div>
         </div>
+
+        {/* Mobile drawer menu */}
+        <MobileDrawer
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          usageCount={displayUsageCount}
+          maxUsage={maxUsage}
+          inviteLink={inviteLink}
+          onCopyInviteLink={handleCopyInviteLink}
+          inviteLinkCopied={inviteLinkCopied}
+          isPaid={displayIsPaid}
+          onGoUnlimited={handleGoUnlimited}
+          isAuthenticated={isAuthenticated}
+          isLoading={isLoading}
+          unlimitedActive={displayUnlimited}
+          referralProgress={referralProgress}
+          onSignInClick={() => {
+            const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+            const encoded = encodeURIComponent(currentPath || "/");
+            router.push(`/login?returnTo=${encoded}`);
+          }}
+          initialInviteMessage={inviteMessage || undefined}
+        />
 
         {/* Session Timeout (headless) */}
         {isAuthenticated && <SessionTimeoutHandler />}

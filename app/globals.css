@@ -64,6 +64,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Custom larger breakpoints */
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2560px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -161,6 +164,62 @@ button:disabled {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom visibility helpers for very large screens */
+.hide-at-4xl { display: inline-flex; }
+.show-at-4xl { display: none; }
+@media (min-width: 2560px) {
+  .hide-at-4xl { display: none !important; }
+  .show-at-4xl { display: block !important; }
+}
+
+/* Custom visibility helpers for 2xl (~1536px) */
+.hide-at-2xl { display: inline-flex; }
+.show-at-2xl { display: none; }
+@media (min-width: 1536px) {
+  .hide-at-2xl { display: none !important; }
+  .show-at-2xl { display: block !important; }
+}
+
+/* Custom visibility helpers for ~1152px (between lg 1024 and xl 1280) */
+.hide-at-1152 { display: inline-flex; }
+.show-at-1152 { display: none; }
+@media (min-width: 1152px) {
+  .hide-at-1152 { display: none !important; }
+  .show-at-1152 { display: block !important; }
+}
+
+/* Responsive typography helpers */
+.typography-body {
+  font-size: clamp(14px, 1.1vw + 0.2rem, 16px);
+  line-height: 1.5;
+}
+
+.typography-input {
+  /* Larger base on small screens, scales smoothly, caps at comfortable desktop size */
+  font-size: clamp(16px, 1.2vw + 0.4rem, 20px);
+  line-height: 1.6;
+}
+
+.typography-h2 {
+  font-size: clamp(18px, 1.6vw + 0.2rem, 22px);
+  line-height: 1.3;
+}
+
+.typography-button {
+  font-size: clamp(13px, 1vw + 0.2rem, 16px);
+  line-height: 1.2;
+}
+
+.typography-nav {
+  font-size: clamp(15px, 1.1vw + 0.3rem, 18px);
+  line-height: 1.3;
+}
+
+.typography-small {
+  font-size: clamp(12px, 0.8vw + 0.2rem, 14px);
+  line-height: 1.2;
 }
 
 /* Rotating Gradient Border Effect */
@@ -274,44 +333,6 @@ button:disabled {
   box-shadow: 0 0 5px rgba(63, 63, 63, 0.041), 0 0 40px rgba(1, 104, 90, 0.041);
 }
 
-/* Desktop-only viewport restriction */
-.desktop-only-overlay {
-  display: none;
-}
-
-@media (max-width: 1080px) {
-  .main-app-content {
-    display: none !important;
-  }
-  
-  .desktop-only-overlay {
-    display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100vh;
-    height: 100dvh;
-    background: var(--color-bg-1);
-    z-index: 9999;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 1.5rem;
-    text-align: center;
-    box-sizing: border-box;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding-bottom: 2.5rem;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    max-width: 100vw;
-    padding-top: 2rem;
-  }
-}
+/* Removed desktop-only viewport restriction to enable mobile layout */
 
 
