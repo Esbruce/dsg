@@ -8,10 +8,12 @@ export default function Hero() {
           BETA
         </span> */}
       </div>
-      <h1 className="font-bold mb-3 sm:mb-4 md:mb-6 leading-tight text-[var(--color-neutral-900)] text-[clamp(22px,6vw,34px)] sm:text-[clamp(26px,5vw,40px)] md:text-[44px] max-w-[28rem] sm:max-w-3xl mx-auto">
-        <span className="block sm:inline">Medical Notes to</span>{" "}
-        <span className="block text-[var(--color-primary)]">Discharge Summary</span>{" "}
-        <span className="block sm:inline">in Seconds</span>
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight text-[var(--color-neutral-900)]">
+        Medical Notes to{" "}<br className="hidden md:block" /> 
+        <span className="text-[var(--color-primary)]">
+          Discharge Summary
+        </span>{" "}
+        in Seconds
       </h1>
       <p className="text-base sm:text-lg text-[var(--color-neutral-600)] max-w-2xl mx-auto">
         Made with doctors, for doctors.
