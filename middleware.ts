@@ -7,6 +7,8 @@ export async function middleware(request: NextRequest) {
 
   // Allow public access to /confirm and /error
   if (
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
     pathname.startsWith('/confirm') ||
     pathname.startsWith('/error') ||
     pathname.startsWith('/api/stripe/webhook')
@@ -28,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|site.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
 
