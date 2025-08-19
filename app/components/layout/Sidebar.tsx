@@ -61,9 +61,9 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-80 h-full bg-[var(--color-bg-5)] border-r border-[var(--color-neutral-300)] flex flex-col">
+    <aside className="w-80 h-full flex flex-col border-r border-[var(--color-neutral-300)] bg-white/70 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-symmetric overflow-hidden">
       {/* Branding */}
-      <div className="p-4 flex justify-center">
+      <div className="p-5 flex items-center justify-center border-b border-[var(--color-neutral-300)] bg-white/60">
         <div className="relative w-full h-20">
           <Image
             src="/dsg_brand.jpg"
@@ -77,7 +77,7 @@ export default function Sidebar({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 border-t border-[var(--color-neutral-300)] p-6 space-y-6 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
         {showSkeletons ? (
           <>
             <UsageSkeleton />
@@ -107,7 +107,7 @@ export default function Sidebar({
       </div>
 
       {/* Auth Actions */}
-      <div className="p-6 flex-shrink-0">
+      <div className="p-5 flex-shrink-0 border-t border-[var(--color-neutral-300)] bg-white/60">
         {isLoading ? null : isAuthenticated ? (
           <button 
             onClick={handleLogout}
