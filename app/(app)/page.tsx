@@ -377,7 +377,7 @@ export default function Home() {
   console.log("🎨 Render state:", { isProcessing, showOutput, isAuthProcessing, isInlineLoginModalOpen });
   
   return (
-    <div className="h-full flex flex-col pb-[5vw] px-[10vw]">
+    <div className="h-full flex flex-col md:pb-[5vw] md:px-[10vw]">
       {showLimitOverlay ? (
         <section className="flex-1 flex items-center justify-center px-4">
           <div className="w-full max-w-md">
@@ -392,14 +392,14 @@ export default function Home() {
         <>
           {/* Hero Section - Only visible when not showing output */}
           {!showOutput && !isProcessing && (
-            <section className="px-6 py-6 flex-shrink-0">
+            <section className="px-4 sm:px-6 pt-2 pb-4 sm:py-6 flex-shrink-0">
               <Hero />
             </section>
           )}
 
           {/* Input Section or Login Modal - Only visible when not processing and not showing output */}
           {!isProcessing && !showOutput && !isAuthProcessing && (
-            <section className="flex-1">
+            <section className="flex-1 px-4 pb-4 sm:px-6 sm:pb-6 md:px-0 md:pb-0">
               {isInlineLoginModalOpen ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="bg-white rounded-xl shadow-symmetric border border-[var(--color-neutral-300)] max-w-md w-full p-8">

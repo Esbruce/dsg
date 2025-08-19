@@ -2,13 +2,13 @@ import React from "react";
 
 export default function Hero() {
   return (
-    <div className="text-center py-6 sm:py-8 md:py-12 px-4">
-      <div className="mb-3 flex justify-center">
+    <div className="text-center pt-2 pb-4 sm:py-6 md:py-12 px-3 sm:px-4">
+      <div className="mb-0 sm:mb-3 flex justify-center">
         {/* <span className="inline-flex items-center rounded-full border border-[var(--color-primary-light)] bg-[color:rgba(6,190,190,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary-dark)]">
           BETA
         </span> */}
       </div>
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight text-[var(--color-neutral-900)]">
+      <h1 className="text-[clamp(1.125rem,6vw,1.875rem)] md:text-4xl font-bold mb-2 sm:mb-4 md:mb-6 leading-tight text-[var(--color-neutral-900)]">
         Medical Notes to{" "}<br className="hidden md:block" /> 
         <span className="text-[var(--color-primary)]">
           Discharge Summary
