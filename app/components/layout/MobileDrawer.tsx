@@ -1,6 +1,9 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
+import { logout } from "@/app/login/actions";
+import { useUserData } from "@/lib/hooks/useUserData";
 import MobileSidebarContent from "./MobileSidebarContent";
 
 type MobileDrawerProps = {
@@ -38,6 +41,25 @@ export default function MobileDrawer({
   onSignInClick,
   initialInviteMessage,
 }: MobileDrawerProps) {
+  const router = useRouter();
+  const { refreshUserData } = useUserData();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      await refreshUserData();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const handleSignInFromFooter = () => {
+    try {
+      onClose();
+    } catch {}
+    onSignInClick?.();
+  };
   return (
     <div
       className={`fixed inset-0 z-[10000] hide-at-1152 ${
@@ -57,7 +79,7 @@ export default function MobileDrawer({
       <div
         className={`absolute top-0 left-0 h-full w-[90vw] max-w-sm bg-white shadow-xl transition-transform duration-200 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } flex flex-col`}
         role="dialog"
         aria-modal="true"
       >
@@ -77,7 +99,7 @@ export default function MobileDrawer({
           </div>
         </div>
 
-        <div className="h-[calc(100%-56px)] overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)]">
           <MobileSidebarContent
             usageCount={usageCount}
             maxUsage={maxUsage}
@@ -90,10 +112,38 @@ export default function MobileDrawer({
             isAuthenticated={isAuthenticated}
             isLoading={isLoading}
             referralProgress={referralProgress}
-            onSignInClick={onSignInClick}
+            onSignInClick={() => {
+              try { onClose(); } catch {}
+              onSignInClick?.();
+            }}
             onGoUnlimited={onGoUnlimited}
             initialInviteMessage={initialInviteMessage}
           />
+        </div>
+
+        {/* Auth Actions (Footer) */}
+        <div className="p-4 flex-shrink-0 border-t border-[var(--color-neutral-300)] bg-white/60">
+          {isLoading ? null : isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
+          ) : (
+            <button
+              onClick={handleSignInFromFooter}
+              className="w-full text-left px-3 py-2 text-sm text-[var(--color-primary)] hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Sign In
+            </button>
+          )}
         </div>
       </div>
     </div>
