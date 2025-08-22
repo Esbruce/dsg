@@ -31,7 +31,7 @@ export default function InputSection({
               <textarea
                 value={medicalNotes}
                 onChange={onNotesChange}
-                placeholder="Enter your medical documentation here ..."
+                placeholder="Enter your medical documentation here. Please note - The better the information you provide, the better and more accurate the output will be."
                 maxLength={50000}
                 className="w-full h-full p-4 md:p-6 rounded-2xl bg-transparent border-0 focus:outline-none focus:ring-0 transition-all resize-none text-black placeholder-[var(--color-neutral-400)] typography-input relative z-[3] flex-1"
               />
